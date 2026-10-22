@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Conecta SIPOFE</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg viewBox='0 0 32 32'%3E%3Cpath d='M23.4 8.6A10.4 10.4 0 1 0 23.4 23.4' fill='none' stroke='%2300549A' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 16 8.2 10.9M16 16 6 18.6M16 16l7.4 7.4' stroke='%2300549A' stroke-width='1.6' stroke-linecap='round' opacity='.55'/%3E%3Ccircle cx='23.4' cy='8.6' r='3' fill='%232DA44A'/%3E%3Ccircle cx='23.4' cy='23.4' r='3' fill='%23FDDB00' stroke='%23C9A800' stroke-width='.6'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%2300549A'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='7' fill='%23fff'/%3E%3Cpath d='M23.4 8.6A10.4 10.4 0 1 0 23.4 23.4' fill='none' stroke='%2300549A' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M16 16 8.2 10.9M16 16 6 18.6M16 16l7.4 7.4' stroke='%2300549A' stroke-width='1.6' stroke-linecap='round' opacity='.55'/%3E%3Ccircle cx='23.4' cy='8.6' r='3' fill='%232DA44A'/%3E%3Ccircle cx='23.4' cy='23.4' r='3' fill='%23FDDB00' stroke='%23C9A800' stroke-width='.6'/%3E%3Ccircle cx='16' cy='16' r='3.2' fill='%2300549A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -1170,7 +1170,7 @@ function render(){
   IDX=[];
   const v=V[st.view]||V.home;
   $('#crumb').innerHTML=st.view==='home'?`<b>Visão geral</b>`:`<span class="g">${v.g}</span>${ic('chev')}<b>${v.t}</b>`;
-  document.title=st.view==='home'?'Conecta SIPOFE':v.t+' · Conecta SIPOFE';
+  document.title='Conecta SIPOFE';
   renderNav();
   if(!LOADED){$('#view').innerHTML=`<div class="loading"><span class="spin"></span>Carregando dados da rede…</div>`;return}
   if(LOAD_ERR&&st.view!=='entrar'){$('#view').innerHTML=`<section class="panel lockp"><span class="lk bad">${ic('x')}</span><h2>Não foi possível carregar os dados</h2><p>${esc(LOAD_ERR)}</p><button class="btn pri" id="btnRetry">${ic('refresh')}Tentar de novo</button></section>`;return}
