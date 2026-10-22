@@ -992,7 +992,9 @@ async function resolveRole(session){
   const {data}=await SB.from('usuarios_autorizados').select('nome_usuario,nome_completo,unidade,nivel_acesso').ilike('nome_usuario',user).maybeSingle();
   if(!data){ME.semAcesso=true;return}
   ME={user,nome:data.nome_completo||user,unidade:data.unidade||''};
-  ROLE=data.nivel_acesso==='admin'?'admin':'usuario';
+  // Admin do Conecta: admin do Hub ou incluído em sipofe_admins (o banco decide)
+  const adm=await SB.rpc('sipofe_admin');
+  ROLE=(adm.error?data.nivel_acesso==='admin':adm.data===true)?'admin':'usuario';
 }
 async function fetchAll(){
   let rows;
