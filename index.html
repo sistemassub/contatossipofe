@@ -1217,7 +1217,7 @@ R.entrar=()=>{
     </div>
     ${ROLE==='visitante'?`<form class="lg-form" id="lgForm" autocomplete="on" onsubmit="return false">
       <div class="eyebrow">Acesso</div><h2>Entrar no Conecta</h2>
-      <p class="lg-sub">Use o mesmo usuário e senha do <b>Hub SCPMA</b>.</p><p class="lg-sub" style="background:color-mix(in srgb,#FDDB00 18%,transparent);padding:.5rem .75rem;border-radius:.5rem;font-size:.75rem"><b>Demonstração:</b> escolha como quer entrar. As alterações ficam salvas só neste navegador.</p><div style="display:flex;flex-direction:column;gap:.5rem"><button type="button" class="btn pri lg-btn" data-demo="giovanna.cintra">${ic('shield')}Entrar como Administradora</button><button type="button" class="btn lg-alt" data-demo="leitor">${ic('user')}Entrar como Usuário (só consulta)</button></div><p class="lg-sub" style="font-size:.75rem;margin:.25rem 0 0;color:var(--muted)">Ou digite qualquer usuário e senha abaixo:</p>
+      <p class="lg-sub">Use o mesmo usuário e senha do <b>Hub SCPMA</b>.</p>
       <label class="fl"><span>Usuário</span><input id="lgUser" name="username" autocomplete="username" placeholder="seu.usuario" required></label>
       <label class="fl"><span>Senha</span><div class="pw"><input id="lgPass" name="password" type="password" autocomplete="current-password" required><button type="button" class="btn icon ghost sm" id="lgEye" aria-label="Mostrar senha">${ic('eye')}</button></div></label>
       <div class="lg-err" id="lgErr" role="alert"></div>
@@ -2127,7 +2127,6 @@ async function formLogin(){
     st.home.org=null;go('home');toast('Bem-vindo(a), '+S(ME.nome).split(' ')[0]+'! Acesso: '+ROLE_LBL[ROLE])}
   catch(err){er.textContent=err.message||'Não foi possível entrar.';btn.disabled=false;btn.innerHTML=ic('login')+'Entrar'}
 }
-document.addEventListener('click',e=>{const b=e.target.closest('[data-demo]');if(!b)return;e.preventDefault();$('#lgUser').value=b.dataset.demo;$('#lgPass').value='demo';formLogin()});
 document.addEventListener('click',e=>{if(e.target.closest('#lgBtn')){e.preventDefault();formLogin()}});
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&(e.target.id==='lgUser'||e.target.id==='lgPass')){e.preventDefault();formLogin()}});
 $('#btnTheme').onclick=()=>{const r=document.documentElement;const dark=r.dataset.theme==='dark';r.dataset.theme=dark?'light':'dark';try{localStorage.setItem('conecta-sipofe-tema',r.dataset.theme)}catch(_){}renderNav()};
