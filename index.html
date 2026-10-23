@@ -716,6 +716,12 @@ html:not(.can-edit) [data-edit],html:not(.can-edit) .ebtn{display:none!important
 .mod::before{display:none}
 .mod:hover{box-shadow:none;background:var(--surface-3)}
 :root[data-theme="dark"] .panel,:root[data-theme="dark"] .stats,:root[data-theme="dark"] .mod{background:var(--surface)}
+.dp-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;padding:1rem 1.25rem 0}
+.dp-chk{display:flex;gap:.5rem;align-items:flex-start;font-size:.78rem;color:var(--ink);padding:.25rem 0;cursor:pointer}
+.dp-form .dp-chk input{width:1rem;height:1rem;padding:0;margin:.15rem 0 0;accent-color:var(--brand);flex:none}
+.desp-doc{margin:.5rem 1.25rem 1.5rem;padding:1.5rem 1.75rem;background:#fff;color:#111;border:1px solid var(--line);border-radius:.75rem;font:12pt/1.5 Calibri,Arial,sans-serif}
+.desp-doc ul{padding-left:2.5rem}
+@media (max-width:640px){.dp-form{grid-template-columns:1fr}.desp-doc{padding:1rem;font-size:11pt}}
 </style>
 </head>
 <body>
@@ -1531,6 +1537,9 @@ function openEnt(i){
   openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">Entrevista FC/GRG</div><h3>${esc(e.nome)}</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${stat(e.status)}${e.grau?`<span class="tag">${esc(e.grau)}</span>`:''}</div></div><button class="btn sm" data-report="entrevista:${e.id}" title="Relatório da entrevista">${ic('printer')}Relatório</button><button class="btn sm" data-edit="ent:${e.id}">${ic('edit')}Editar</button><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
   <div class="dr-b"><div class="kv">${kv('Órgão',esc(e.org))}${kv('Unidade',esc(e.uni))}${kv('Processo SEI',`<span class="mono">${esc(e.sei)}</span>`)}${kv('Escolaridade',esc(e.esc))}${kv('Data de envio',dt(e.env))}${kv('Data da entrevista',dt(e.ent))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',esc(e.res||'Em andamento'))}</div>
   ${e.obs?`<div class="sec-t">Observações e encaminhamentos</div><div class="obs">${esc(e.obs)}</div>`:''}
+  <div class="sec-t">Pós-entrevista</div>
+  ${despPronto(e)?`<div class="linkbox ${e.status==='Deferido'?'ok':''}">${ic('file')}<div><b>Despacho de devolutiva</b><span>${e.desp&&e.desp.salvoEm?'Dados salvos em '+esc(isoBR(e.desp.salvoEm))+'. ':''}Gera o rascunho para copiar e colar no SEI, com ${e.status==='Indeferido'?'objeção':'“não apresentamos objeção”'} marcado.</span></div><button class="btn sm pri" data-desp="${i}">${ic('file')}Gerar rascunho</button></div>`
+    :`<div class="linkbox">${ic('file')}<div><b>Despacho de devolutiva</b><span>Fica disponível quando a aprovação na entrevista ou o resultado for registrado.</span></div></div>`}
   <div class="sec-t">Controle de FCs e GRGs</div>
   ${e.fcRef?`<div class="linkbox ok">${ic('award')}<div><b>Incluído no controle</b><span>${esc(fcShort(e.fcRef.fc))} · ${fmtBRL(e.fcRef.valor)} por mês · ${esc(e.fcRef.org)}</span></div><button class="btn sm" data-go="fcs" data-opts='${esc(JSON.stringify({q:e.fcRef.nome,org:'',vinc:'',lvl:''}))}'>Ver no controle ${ic('arrow')}</button></div>`
     :e.status==='Deferido'?`<div class="linkbox warn">${ic('award')}<div><b>Deferido, mas fora do controle</b><span>Inclua o servidor no controle com o grau ${esc(e.grau||'—')} e o valor ${fmtBRL(e.valor!=null&&e.valor!==''?e.valor:VALOR_NIVEL[lvlOf(e.grau)]||0)}.</span></div><button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button></div>`
@@ -1539,6 +1548,117 @@ function openEnt(i){
   ${e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro encontrado no roteiro</b><span>${esc(e.reg.nome)} · ${e.reg.filled} de ${D.roteiro.perguntas.length} etapas registradas</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg)}))}'>Abrir registro ${ic('arrow')}</button></div>${regHTML(e.reg)}`
     :`<div class="linkbox">${ic('list')}<div><b>Sem registro no roteiro</b><span>Nenhum registro com o nome deste candidato foi encontrado.</span></div><button class="btn sm pri" data-edit="regent:${e.id}">${ic('plus')}Criar registro</button></div>`}</div>`);
 }
+
+/* ---- Pós-entrevista: rascunho do despacho SEI ---- */
+const DESP_REQS=['Encontra-se {lot} em unidade responsável pelo planejamento, orçamento e finanças;','Possui no mínimo 6 meses de conhecimento na área de planejamento, orçamento e finanças;','Possui curso superior;','Possui certificado de curso relacionado à área em que irá atuar;','Possui perfil técnico para atuar na área de planejamento, orçamento e finanças;','Possui alguma certificação superior relacionada à área de planejamento, orçamento e finanças.'];
+const DESP_KEY='conecta-despacho-padrao';
+const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const NUM_EXT={1:'1 (uma)',2:'2 (duas)',3:'3 (três)'};
+let DP=null;
+function despPadrao(){try{return JSON.parse(localStorage.getItem(DESP_KEY)||'{}')||{}}catch(_){return {}}}
+function despPronto(e){return e.status==='Deferido'||e.status==='Indeferido'||norm(e.apr)==='sim'}
+function despCampos(e){
+  const p=despPadrao(),lv=lvlOf(e.grau);
+  const sup=/superior|gradua|p[oó]s|especiali|mestr|doutor/i.test(S(e.esc));
+  return Object.assign({gen:'',curr:'',plano:'',assin:'',forma:'de forma remota',banca:p.banca||'',ressalva:'',assinatura:p.assinatura||'',
+    valor:e.valor!=null&&e.valor!==''?+e.valor:(VALOR_NIVEL[lv]||0),reqs:[true,true,sup,true,true,false]},e.desp||{});
+}
+function despBlocos(e,f){
+  const g=f.gen,G=(m,a,n)=>g==='m'?m:g==='f'?a:n;
+  const o=G('o','a','o(a)'),serv=G('servidor','servidora','servidor(a)'),cand=G('candidato','candidata','candidato(a)'),quest=G('Questionado','Questionada','Questionado(a)');
+  const r=(e.reg&&e.reg.resp||[]).map(S),def=e.status!=='Indeferido';
+  const sig=sigOf(e.org),oc=D.contatos.find(c=>norm(c.sigla)===norm(sig));
+  const inter=oc&&oc.ent?`${S(oc.ent).toUpperCase()} – ${oc.sigla}`:S(e.org).toUpperCase();
+  const brl=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2});
+  const hoje=new Date(),dEnt=/^\d{4}-\d{2}-\d{2}/.test(S(e.ent))?isoBR(e.ent):'';
+  const B=[],p=(s,cls)=>B.push({t:cls||'p',s}),falta='[preencher]';
+  p(`Referência: Processo nº ${S(e.sei)||falta}`,'ref');p(`Interessado(a): ${inter||falta}`,'ref');p('Assunto: Devolutiva - entrevista','ref');
+  p(`Trata-se de solicitação de concessão de ${NUM_EXT[1]} ${S(e.grau)||falta}, no valor de ${brl(f.valor)}, pertencente à Rede SIPOFE – área de Planejamento, estabelecida pelo Decreto nº 10.289, de 12 de julho de 2023, ${G('ao servidor','à servidora','ao(à) servidor(a)')} ${S(e.nome).toUpperCase()}.`);
+  p(`Foram anexados aos autos o currículo d${o} ${serv} (${S(f.curr)||falta}), bem como o Plano de Trabalho (${S(f.plano)||falta})${S(f.assin)?`, assinado por ${S(f.assin)}`:''}, dos quais é possível extrair as seguintes informações:`);
+  DESP_REQS.forEach((q,k)=>{if(f.reqs[k])p(q.replace('{lot}',G('lotado','lotada','lotado(a)')),'li')});
+  p(`Os requisitos apresentados atendem ao disposto no § 5º do art. 11 do Decreto nº 10.289, de 2023.${S(f.ressalva)?' '+S(f.ressalva):''}`);
+  p(`A entrevista foi realizada ${S(f.forma)}${S(f.banca)?' '+S(f.banca):''}${dEnt?`, em ${dEnt}`:''}, ocasião em que foram apresentadas a Subsecretaria Central de Planejamento, Monitoramento e Avaliação e os objetivos da entrevista.`);
+  if(r[1])p(`${quest} acerca de seu nível de conhecimento sobre a Rede SIPOFE, ${o} ${serv} informou: ${r[1]}`);
+  if(r[2])p(`Sobre sua trajetória profissional: ${r[2]}`);
+  if(r[3])p(`${quest} sobre sua unidade de lotação e suas atribuições, ${o} ${serv} informou: ${r[3]}`);
+  if(r[5])p(`Quanto aos conhecimentos técnicos: ${r[5]}`);
+  if(r[6])p(`Sobre sua contribuição como membro da Rede: ${r[6]}`);
+  p(`Sobre as expectativas de desempenho d${o} ${serv} como membro da Rede SIPOFE – Planejamento, a banca esclareceu que a Unidade Central espera uma atuação que contribua para a melhoria contínua das atividades realizadas pela Setorial, em alinhamento às diretrizes fornecidas por esta Unidade, resultando no fortalecimento da Rede. Foram destacadas, ainda, as atribuições do ponto focal da Rede.`);
+  if(r[7]&&!/^sem perguntas\.?$/i.test(r[7]))p(`Questionamentos d${o} ${cand}: ${r[7]}`);
+  p(`Em relação ao perfil d${o} ${cand}, registra-se que ${G('o mesmo','a mesma','o(a) mesmo(a)')} ${def?'apresenta':'não apresenta, neste momento,'} perfil compatível com as atribuições a serem desempenhadas na Rede SIPOFE – Planejamento.`);
+  if(r[8])p(`Quanto aos aspectos comportamentais, ${o} ${cand} demonstrou: ${r[8]}`);
+  if(r[9])p(`Registra-se, ainda: ${r[9]}`);
+  p('Diante do exposto:');
+  p(`(${def?'X':' '}) não apresentamos objeção à concessão da gratificação ora solicitada.`,'opt');
+  p(`(${def?' ':'X'}) apresentamos objeção à concessão da gratificação ora solicitada.`,'opt');
+  p('Encaminhem-se os autos à Subsecretaria Central de Planejamento, Monitoramento e Avaliação para prosseguimento dos feitos.');
+  p(`GOIÂNIA, ${hoje.getDate()} de ${MESES[hoje.getMonth()]} de ${hoje.getFullYear()}.`);
+  S(f.assinatura).split('\n').map(S).filter(Boolean).forEach(l=>p(l,'sig'));
+  return B;
+}
+function despHTML(B){
+  const st={p:'text-align:justify;text-indent:25mm;margin:0 0 6pt',ref:'text-align:left;margin:0 0 2pt',opt:'text-align:justify;text-indent:25mm;margin:0 0 2pt',sig:'text-align:center;margin:0'};
+  const cls={p:'Texto_Justificado_Recuo_Primeira_Linha',ref:'Texto_Alinhado_Esquerda',opt:'Texto_Justificado_Recuo_Primeira_Linha',sig:'Texto_Centralizado'};
+  let h='',ul=false;
+  B.forEach((b,i)=>{
+    if(b.t==='li'){if(!ul){h+='<ul style="margin:0 0 6pt">';ul=true}h+=`<li style="text-align:justify">${esc(b.s)}</li>`;return}
+    if(ul){h+='</ul>';ul=false}
+    const gap=b.t==='sig'&&B[i-1]&&B[i-1].t!=='sig'?'<p>&nbsp;</p>':'';
+    h+=`${gap}<p class="${cls[b.t]}" style="${st[b.t]}">${esc(b.s)}</p>`;
+    if(b.t==='ref'&&B[i+1]&&B[i+1].t!=='ref')h+='<p>&nbsp;</p>';
+  });
+  return h+(ul?'</ul>':'');
+}
+function despTexto(B){return B.map((b,i)=>(b.t==='li'?'• ':'')+b.s+((b.t==='ref'&&B[i+1]&&B[i+1].t!=='ref')?'\n':'')).join('\n')}
+function openDesp(i){
+  const e=D.entrevistas[i];if(!e)return;
+  DP={i,e,f:despCampos(e)};const f=DP.f;
+  const inp=(k,l,ph,em)=>`<label class="fl"><span>${l}</span><input data-dp="${k}" value="${esc(f[k])}" placeholder="${esc(ph||'')}">${em?`<em>${em}</em>`:''}</label>`;
+  const sel=(k,l,ops)=>`<label class="fl"><span>${l}</span><select data-dp="${k}">${ops.map(([v,t])=>`<option value="${esc(v)}"${S(f[k])===v?' selected':''}>${esc(t)}</option>`).join('')}</select></label>`;
+  openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">Pós-entrevista</div><h3>Rascunho do despacho SEI</h3><div class="muted" style="font-size:.75rem">${esc(e.nome)} · ${stat(e.status)}</div></div><button class="btn sm pri" data-dpcopy>${ic('copy')}Copiar</button><button class="btn icon" data-ent="${i}" aria-label="Voltar para a entrevista" title="Voltar"><span style="display:inline-flex;transform:rotate(180deg)">${ic('arrow')}</span></button><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
+  <div class="dr-b">
+    <div class="linkbox">${ic('file')}<div><b>Como usar</b><span>Confira os campos, clique em “Copiar” e, no SEI, crie o Despacho e cole com Ctrl+V. Os parágrafos sobre a entrevista vêm das anotações do roteiro; revise a redação antes de assinar.</span></div></div>
+    ${e.reg?'':`<div class="linkbox warn">${ic('list')}<div><b>Sem registro no roteiro</b><span>Os parágrafos da entrevista ficam de fora até existir um registro do roteiro com o nome deste candidato.</span></div></div>`}
+    <div class="dp-form">
+      ${sel('gen','Tratamento',[['','o(a) servidor(a)'],['m','o servidor'],['f','a servidora']])}
+      ${inp('valor','Valor da gratificação (R$)','2500','Preenchido pelo grau '+esc(e.grau||'—'))}
+      ${inp('curr','Nº SEI do currículo','96939012')}
+      ${inp('plano','Nº SEI do Plano de Trabalho','96944367')}
+      <label class="fl full"><span>Plano de Trabalho assinado por</span><input data-dp="assin" value="${esc(f.assin)}" placeholder="Fulano, diretor de planejamento, e Beltrano, gerente de planejamento"></label>
+      ${sel('forma','Entrevista',[['de forma remota','de forma remota'],['presencialmente','presencialmente']])}
+      <label class="fl"><span>Banca</span><input data-dp="banca" value="${esc(f.banca)}" placeholder="pelas servidoras Fulana e Beltrana"><em>Do jeito que entra no texto</em></label>
+      <div class="fl full"><span>Requisitos atendidos</span>${DESP_REQS.map((q,k)=>`<label class="dp-chk"><input type="checkbox" data-dpreq="${k}"${f.reqs[k]?' checked':''}>${esc(q.replace('{lot}','lotado(a)').replace(/[;.]$/,''))}</label>`).join('')}</div>
+      <label class="fl full"><span>Ressalva sobre os requisitos (opcional)</span><textarea data-dp="ressalva" rows="2" placeholder="Porém registra-se que...">${esc(f.ressalva)}</textarea></label>
+      <label class="fl full"><span>Assinatura (uma linha por item)</span><textarea data-dp="assinatura" rows="2" placeholder="NOME COMPLETO&#10;Cargo">${esc(f.assinatura)}</textarea></label>
+      ${canEdit()?`<div class="fl full"><button class="btn sm" data-dpsave>${ic('check')}Salvar estes dados na entrevista</button><em>${e.desp&&e.desp.salvoEm?'Salvo em '+esc(isoBR(e.desp.salvoEm)):'Guarda os números SEI e as escolhas para gerar de novo depois.'}</em></div>`:''}
+    </div>
+    <div class="sec-t">Prévia</div>
+    <div class="desp-doc" id="dpPrev"></div>
+  </div>`);
+  despAtualiza();
+}
+function despAtualiza(){const el=$('#dpPrev');if(el&&DP)el.innerHTML=despHTML(despBlocos(DP.e,DP.f))}
+function despCopiar(){
+  if(!DP)return;const B=despBlocos(DP.e,DP.f),html=despHTML(B),txt=despTexto(B);
+  const ok=()=>toast('Despacho copiado. No SEI, cole com Ctrl+V.');
+  const fallback=()=>{const d=document.createElement('div');d.contentEditable='true';d.style.cssText='position:fixed;left:-9999px;top:0';d.innerHTML=html;document.body.appendChild(d);const r=document.createRange();r.selectNodeContents(d);const s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');ok()}catch(_){toast('Não foi possível copiar. Selecione a prévia e copie.')}s.removeAllRanges();d.remove()};
+  try{if(navigator.clipboard&&window.ClipboardItem){navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]).then(ok,fallback);return}}catch(_){}
+  fallback();
+}
+function despSalvar(){
+  if(!DP||!canEdit())return;
+  try{localStorage.setItem(DESP_KEY,JSON.stringify({banca:DP.f.banca,assinatura:DP.f.assinatura}))}catch(_){}
+  DP.e.desp=Object.assign({},DP.f,{salvoEm:new Date().toISOString().slice(0,10)});
+  persist('Despacho preparado: '+DP.e.nome);toast('Dados do despacho salvos');openDesp(DP.i);
+}
+document.addEventListener('input',e=>{const t=e.target;if(!DP)return;
+  if(t.dataset.dp!=null){DP.f[t.dataset.dp]=t.value;despAtualiza()}
+  else if(t.dataset.dpreq!=null){DP.f.reqs[+t.dataset.dpreq]=t.checked;despAtualiza()}});
+document.addEventListener('change',e=>{const t=e.target;if(DP&&t.dataset.dpreq!=null){DP.f.reqs[+t.dataset.dpreq]=t.checked;despAtualiza()}});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-desp],[data-dpcopy],[data-dpsave]');if(!b)return;e.preventDefault();
+  if(b.dataset.desp!=null)openDesp(+b.dataset.desp);else if(b.dataset.dpcopy!=null)despCopiar();else despSalvar();
+});
 
 /* ---- Roteiro ---- */
 function regOrg(r){if(r.org)return r.org;if(S(r.extra))return sigOf(r.extra);const e=D.entrevistas.find(x=>x.reg===r);return e?sigOf(e.org):''}
