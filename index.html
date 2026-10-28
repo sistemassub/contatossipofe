@@ -760,6 +760,7 @@ html:not(.can-edit) [data-edit],html:not(.can-edit) .ebtn{display:none!important
 .cd-q textarea{display:block;width:100%;margin-top:.75rem;padding:.75rem .875rem;border:1px solid var(--line);border-radius:.875rem;background:var(--surface);font:inherit;font-size:.875rem;line-height:1.5;resize:vertical;min-height:6rem;color:var(--ink)}
 .cd-q textarea:focus{outline:2px solid var(--brand);outline-offset:0;border-color:transparent}
 @media (max-width:900px){.cd-body{grid-template-columns:1fr}.cd-nav{display:none}.cd-main{padding:1rem}.cd-top{display:grid;grid-template-columns:auto 1fr;padding:.625rem 1rem;gap:.5rem .75rem}.cd-who{min-width:0}.cd-who h2{font-size:1rem}.cd-date{grid-column:1/-1;flex-direction:row;align-items:center;gap:.5rem}.cd-prog{grid-column:1/-1;min-width:0}.cd-st{grid-column:1;text-align:left;min-width:0;align-self:center}.cd-top [data-cdsave]{grid-column:2;justify-self:end}.cd-tip{display:none}.cd-h h3{font-size:.875rem}}
+.fnote{grid-column:1/-1;display:flex;gap:.625rem;align-items:flex-start;padding:.75rem .875rem;border-radius:.875rem;background:var(--blue-soft);color:var(--ink-2);font-size:.78rem;line-height:1.45}.fnote svg.i{color:var(--info);margin-top:.1rem;flex:none}
 </style>
 </head>
 <body>
@@ -1882,14 +1883,14 @@ function openForm(cfg){
   FORM=cfg;
   const last=cfg.when?`<span class="fmeta">Última alteração: ${new Date(cfg.when).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span>`:'';
   openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">${esc(cfg.eyebrow||'')}</div><h3>${esc(cfg.title)}</h3></div><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
-  <div class="dr-b"><form id="frm" class="frm" onsubmit="return false">${cfg.fields.map(f=>f.section?`<div class="fsec">${esc(f.section)}</div>`:fieldHTML(f,cfg.values[f.k])).join('')}</form></div>
-  <div class="dr-f">${cfg.onDelete?`<button class="btn danger" data-fdel>${ic('trash')}Excluir</button>`:''}${last}<span class="spacer"></span><button class="btn" data-close>Cancelar</button><button class="btn pri" data-fsave>${ic('check')}Salvar</button></div>`);
+  <div class="dr-b"><form id="frm" class="frm" onsubmit="return false">${cfg.fields.map(f=>f.section?`<div class="fsec">${esc(f.section)}</div>`:f.type==='note'?`<div class="fnote">${ic('list')}<span>${esc(f.text)}</span></div>`:fieldHTML(f,cfg.values[f.k])).join('')}</form></div>
+  <div class="dr-f">${cfg.onDelete?`<button class="btn danger" data-fdel>${ic('trash')}Excluir</button>`:''}${last}<span class="spacer"></span><button class="btn" data-close>Cancelar</button>${cfg.alt?`<button class="btn" data-fsave>${ic('check')}Salvar</button><button class="btn pri" data-fsave="alt">${ic(cfg.alt.icon||'arrow')}${esc(cfg.alt.label)}</button>`:`<button class="btn pri" data-fsave>${ic('check')}Salvar</button>`}</div>`);
   setTimeout(()=>{const i=document.querySelector('#frm input,#frm textarea');i&&i.focus()},60);
 }
 function readForm(){
   const fm=$('#frm');const out={};
   FORM.fields.forEach(f=>{
-    if(f.section)return;
+    if(f.section||f.type==='note')return;
     if(f.type==='rows'){out[f.k]=[...fm.querySelectorAll(`[data-rows="${f.k}"] .rw`)].map(rw=>{const o={};rw.querySelectorAll('[data-c]').forEach(i=>o[i.dataset.c]=S(i.value));return o}).filter(o=>Object.values(o).some(Boolean));return}
     const el=fm.elements[f.k];if(!el)return;
     if(f.type==='check')out[f.k]=el.checked;
@@ -1899,11 +1900,11 @@ function readForm(){
   });
   return out;
 }
-function saveForm(){
+function saveForm(alt){
   const v=readForm();
   const miss=FORM.fields.filter(f=>f.req&&!S(v[f.k]));
   if(miss.length){toast('Preencha: '+miss.map(f=>f.label).join(', '));return}
-  const msg=FORM.onSave(v),after=FORM.after;
+  const msg=FORM.onSave(v),after=alt&&FORM.alt?FORM.alt.after:FORM.after;
   persist(msg||('Alterado: '+FORM.title));
   closeAll();render();toast('Salvo');if(after)after();
 }
@@ -1984,7 +1985,7 @@ const EDIT={
     const e=id?D.entrevistas.find(y=>y.id===+id):null;let savedId=null;
     const sn=[['','—'],'Sim','Não','Sim. Com ressalva'];
     openForm({eyebrow:'Entrevistas FCs e GRGs',title:e?e.nome:'Nova entrevista',when:e&&e.upd,values:e?{...e,nome:e.nome==='(não informado)'?'':e.nome,fcAuto:e.fcAuto!==false}:{esc:'Superior',fcAuto:true},
-      fields:[{section:'1. Processo recebido'},{k:'nome',label:'Servidor',full:1,req:1},{k:'org',label:'Órgão',type:'combo',options:uniq(D.entrevistas.map(y=>y.org).concat(siglas()))},{k:'uni',label:'Unidade'},
+      fields:[{section:'1. Processo recebido'},{type:'note',text:'O roteiro da entrevista não fica neste formulário: use “Salvar e abrir o roteiro” para ir direto às perguntas, ou abra depois pela ficha da entrevista (Conduzir entrevista).'},{k:'nome',label:'Servidor',full:1,req:1},{k:'org',label:'Órgão',type:'combo',options:uniq(D.entrevistas.map(y=>y.org).concat(siglas()))},{k:'uni',label:'Unidade'},
         {k:'sei',label:'Nº processo SEI'},{k:'grau',label:'Grau FCRG/GRG',type:'combo',options:['FCRG-1','FCRG-2','FCRG-3','FCRG-4','FCRG-5','GRG-1','GRG-2','GRG-3','GRG-4','GRG-5']},
         {k:'env',label:'Data de envio',type:'date'},{k:'esc',label:'Escolaridade',type:'combo',options:['Superior','Médio']},
         {section:'2. Depois da entrevista (pode deixar para depois)'},{k:'ent',label:'Data da entrevista',type:'date'},{k:'exp',label:'Experiência',type:'select',options:sn},
@@ -2001,6 +2002,7 @@ const EDIT={
         if(x.status==='Deferido'&&x.fcAuto!==false){const r=fcFromEnt(x);if(r)extra=r}
         return (e?'Entrevista atualizada: ':'Nova entrevista: ')+v.nome+extra},
       after:()=>reopenEnt(savedId),
+      alt:e&&e.reg?null:{label:'Salvar e abrir o roteiro',icon:'list',after:()=>{if(savedId!=null)openConduct(savedId)}},
       onDelete:e?()=>{savedId=null;D.entrevistas.splice(D.entrevistas.indexOf(e),1);return 'Entrevista excluída: '+e.nome}:null});
   },
   etapa(i){
@@ -2328,7 +2330,7 @@ document.addEventListener('click',e=>{
   const fe=e.target.closest('[data-edit],[data-fsave],[data-fdel],[data-addrow],[data-delrow]');
   if(fe){e.preventDefault();e.stopPropagation();
     if(fe.dataset.edit!=null){if(!canEdit()){toast('Só administradores podem editar.');return}const [type,...args]=fe.dataset.edit.split(':');EDIT[type](...args.map(x=>x===''?null:x));return}
-    if(fe.dataset.fsave!=null){saveForm();return}
+    if(fe.dataset.fsave!=null){saveForm(fe.dataset.fsave==='alt');return}
     if(fe.dataset.fdel!=null){delForm(fe);return}
     if(fe.dataset.addrow){const f=FORM.fields.find(x=>x.k===fe.dataset.addrow);const box=document.querySelector(`[data-rows="${f.k}"]`);box.insertAdjacentHTML('beforeend',rowHTML(f,{}));const ins=box.lastElementChild.querySelector('input');ins&&ins.focus();return}
     if(fe.dataset.delrow!=null){fe.closest('.rw').remove();return}
