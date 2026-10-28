@@ -1691,10 +1691,10 @@ R.roteiro=()=>{
     <div class="rg-sum"><div class="rg-prog"><span>Etapas registradas</span><b>${sel.filled} de ${NQ}</b><span class="bar"><i style="width:${pc}%"></i></span></div>
       ${ent?`<button class="rg-ent" data-ent="${D.entrevistas.indexOf(ent)}"><span>Processo de gratificação</span><b>${stat(ent.status)} ${esc(ent.grau||'')}</b><em>Ver entrevista ${ic('arrow')}</em></button>`:'<div class="rg-ent none"><span>Processo de gratificação</span><b class="muted">Nenhuma entrevista com este nome</b></div>'}</div>
     <div class="ansl">${ro.perguntas.map((q,k)=>`<div class="ac ${sel.resp[k]?'':'none'}"><div class="ac-h"><span class="ac-n">${k+1}</span><h4>${esc(q.t)}</h4></div><div class="ac-b">${sel.resp[k]?esc(sel.resp[k]):'Sem anotação nesta etapa.'}</div></div>`).join('')}</div>`:'<div class="empty">Nenhum registro encontrado.</div>';
-  return pageHead('roteiro',exportMenu('roteiro',sel?`<hr><button role="menuitem" data-report="registro:${f.sel}">${ic('file')}<span><b>Registro selecionado (PDF)</b><small>${esc(sel.nome)}</small></span></button>`:'')+addBtn('reg:','Novo registro'))+tabs+`
+  return pageHead('roteiro',exportMenu('roteiro',sel?`<hr><button role="menuitem" data-report="registro:${f.sel}">${ic('file')}<span><b>Registro selecionado (PDF)</b><small>${esc(sel.nome)}</small></span></button>`:'')+'')+tabs+`
   <section class="panel fcard"><div class="filterbar solo">${search('roteiro.q',f.q,'Buscar candidato, processo ou anotação')}
     <select data-f="roteiro.org" aria-label="Filtrar por órgão">${opt('','Todos os órgãos',f.org)}${orgs.map(o=>opt(o,o,f.org)).join('')}</select>
-    <span class="count">${plural(list.length,'registro','registros')} · mais recentes primeiro</span></div></section>
+    <span class="count">${plural(list.length,'registro','registros')} · mais recentes primeiro · novos registros são criados pela entrevista</span></div></section>
   <div class="cgrid"><section class="panel olist"><div class="ol-h">Candidatos <span>${list.length}</span></div><div class="md-list">${list.map(({r,i,org,data})=>`<button data-rsel="${i}" class="${i===f.sel?'on':''}"><span class="t">${esc(r.nome)}</span><span class="d">${data?isoBR(data):'Sem data'}${org?' · '+esc(org):''}</span><span class="c"><span class="mini"><i style="width:${Math.round(r.filled/Math.max(1,NQ)*100)}%"></i></span>${r.filled}/${NQ}</span></button>`).join('')||'<div class="empty">Nenhum registro.</div>'}</div></section>
   <section class="panel odet">${detail}</section></div>`;
 };
