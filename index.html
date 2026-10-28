@@ -1037,7 +1037,7 @@ const st={view:'home',f:{
   geceg:{q:'',eixo:'',fac:''},
   fcs:{q:'',org:'',vinc:'',lvl:'',sort:'nome',dir:1},
   agenda:{q:'',st:'',open:{}},
-  entrevistas:{q:'',status:'',ano:'',org:'',pend:'',sort:'env',dir:-1},
+  entrevistas:{q:'',status:'',ano:'',org:'',pend:'',sort:'dt',dir:-1},
   roteiro:{tab:'roteiro',q:'',org:'',sel:-1}
 },home:{org:null}};
 (function initTheme(){let t=null;try{t=localStorage.getItem('conecta-sipofe-tema')}catch(e){}
@@ -1048,7 +1048,7 @@ function emptyD(){return {contatos:[],geceg:[],fcs:[],entrevistas:[],roteiro:{ti
 D=emptyD();
 const COLS={orgao:()=>D.contatos,eixo:()=>D.geceg,fc:()=>D.fcs,entrevista:()=>D.entrevistas,etapa:()=>D.roteiro.perguntas,registro:()=>D.roteiro.registros,visita:()=>D.agenda};
 const ORDERED=new Set(['eixo','etapa']);
-const DERIVED=new Set(['reg','lvl','status','ano','filled','fcRef','_i']);
+const DERIVED=new Set(['reg','lvl','status','ano','filled','fcRef','_i','dt']);
 const clean=o=>JSON.stringify(o,(k,v)=>DERIVED.has(k)?undefined:v);
 function docsOf(){
   const m=new Map();
@@ -1132,7 +1132,8 @@ function derive(){
   D.entrevistas.forEach(e=>{const rn=norm(e.res);e.status=rn.startsWith('deferido')?'Deferido':rn.startsWith('indeferido')?'Indeferido':rn.startsWith('cancel')?'Cancelado':'Em andamento';e.ano=(/^(\d{4})/.exec(e.ent)||/^(\d{4})/.exec(e.env)||[,''])[1];e.lvl=lvlOf(e.grau)});
   D.roteiro.registros.forEach(r=>{while(r.resp.length<D.roteiro.perguntas.length)r.resp.push('');r.filled=r.resp.filter(Boolean).length});
   D.agenda.forEach(a=>{a.dataRaw=a.iso?isoBR(a.iso):a.dataRaw});
-  D.entrevistas.forEach(e=>{e.reg=findReg(e);e.fcRef=findFc(e)});
+  const isoD=v=>/^\d{4}-\d{2}-\d{2}/.test(S(v))?S(v).slice(0,10):'';
+  D.entrevistas.forEach(e=>{e.reg=findReg(e);e.fcRef=findFc(e);e.dt=isoD(e.ent)||(e.reg&&isoD(e.reg.data))||isoD(e.env)});
   syncMon();
 }
 function findReg(e){const rs=D.roteiro.registros;if(e.regId){const r=rs.find(x=>x.id===e.regId);if(r)return r}return rs.find(x=>samePerson(x.nome,e.nome))||null}
@@ -1562,7 +1563,7 @@ R.entrevistas=()=>{
     <select data-f="entrevistas.ano">${opt('','Todos os anos',f.ano)}${anos.map(a=>opt(a,a,f.ano)).join('')}</select>
     <select data-f="entrevistas.org">${opt('','Todos os órgãos',f.org)}${orgs.map(o=>opt(o,o,f.org)).join('')}</select>
     <select data-f="entrevistas.pend" aria-label="Pendências">${opt('','Pendências: todas',f.pend)}${opt('reg','Sem registro no roteiro',f.pend)}${opt('fc','Deferidos fora do controle de FCs',f.pend)}</select>
-    <span class="count">${plural(rows.length,'processo','processos')} · clique para detalhes</span>
+    <span class="count">${plural(rows.length,'processo','processos')}${f.sort==='dt'?' · mais recentes primeiro':''} · clique para detalhes</span>
   </div>
   <div class="tbl"><table><thead><tr>${sortTh('entrevistas','nome','Servidor')}${sortTh('entrevistas','org','Órgão / unidade')}${sortTh('entrevistas','lvl','Grau')}${sortTh('entrevistas','env','Envio')}${sortTh('entrevistas','ent','Entrevista')}<th>Habilitação</th><th>Aprovação</th>${sortTh('entrevistas','status','Resultado')}<th>Roteiro e controle</th><th></th></tr></thead>
   <tbody>${rows.map(e=>`<tr class="click" data-ent="${D.entrevistas.indexOf(e)}"><td class="w"><b>${esc(e.nome)}</b><span class="sub mono">SEI ${esc(e.sei)||'—'}</span></td><td><b>${esc(e.org)}</b><span class="sub">${esc(e.uni)}</span></td><td>${e.grau?`<span class="tag">${esc(e.grau)}</span>`:'<span class="muted">—</span>'}</td><td>${dtCell(e.env)}</td><td>${dtCell(e.ent)}</td><td>${stat(e.hab)}</td><td>${stat(e.apr)}</td><td>${stat(e.status)}</td><td><div class="links">${e.reg?`<span class="lk ok" title="Registro no roteiro: ${e.reg.filled} de ${D.roteiro.perguntas.length} etapas">${ic('list')}Roteiro ${e.reg.filled}/${D.roteiro.perguntas.length}</span>`:e.status==='Cancelado'?'':`<span class="lk none">${ic('list')}Sem roteiro</span>`}${e.status==='Deferido'?(e.fcRef?`<span class="lk ok" title="No controle de FCs/GRGs">${ic('award')}No controle</span>`:`<span class="lk warn">${ic('award')}Fora do controle</span>`):''}</div></td><td class="num">${editBtn('ent:'+e.id,'Editar entrevista')}</td></tr>`).join('')||'<tr><td colspan="10" class="empty">Nenhum processo encontrado.</td></tr>'}</tbody></table></div></section>`;
