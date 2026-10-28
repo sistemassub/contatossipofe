@@ -722,6 +722,18 @@ html:not(.can-edit) [data-edit],html:not(.can-edit) .ebtn{display:none!important
 .desp-doc{margin:.5rem 1.25rem 1.5rem;padding:1.5rem 1.75rem;background:#fff;color:#111;border:1px solid var(--line);border-radius:.75rem;font:12pt/1.5 Calibri,Arial,sans-serif}
 .desp-doc ul{padding-left:2.5rem}
 @media (max-width:640px){.dp-form{grid-template-columns:1fr}.desp-doc{padding:1rem;font-size:11pt}}
+.esteps{display:flex;gap:.375rem;padding:1rem 1.25rem 0;flex-wrap:wrap}
+.es{flex:1 1 5.5rem;display:flex;flex-direction:column;gap:.125rem;padding:.5rem .625rem;border-radius:.75rem;background:var(--surface-2);color:var(--muted);font-size:.75rem;min-width:0}
+.es span{width:1.375rem;height:1.375rem;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.6875rem;background:var(--surface-3);color:var(--muted);margin-bottom:.125rem}
+.es span svg.i{width:.75rem;height:.75rem;stroke-width:2.5}
+.es b{font-weight:600;color:var(--ink-2)}.es em{font-style:normal;font-size:.6875rem}
+.es.ok span{background:var(--brand);color:#fff}.es.ok b{color:var(--ink)}
+.es.now{background:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--accent)}.es.now span{background:var(--accent);color:#122019}.es.now b{color:var(--ink)}
+.es.skip{opacity:.45}
+.es-next{margin:.5rem 1.25rem 0;font-size:.78rem;color:var(--ink-2)}.es-next.ok{color:var(--brand-ink)}
+.es-next{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;justify-content:space-between}
+.regdet{margin:.5rem 1.25rem 0}.regdet>summary{cursor:pointer;font-size:.78rem;font-weight:600;color:var(--info);padding:.25rem 0}
+.regdet[open]>summary{margin-bottom:.25rem}
 </style>
 </head>
 <body>
@@ -1530,23 +1542,36 @@ R.entrevistas=()=>{
 };
 function detHTML(q){return q.det&&q.det.length?`<ul class="det">${q.det.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}
 function regHTML(r){return `<div class="steps">${D.roteiro.perguntas.map((q,k)=>`<div class="step"><span class="n">${k+1}</span><div><h4>${esc(q.t)}</h4>${detHTML(q)}<div class="ans ${r.resp[k]?'':'none'}">${r.resp[k]?esc(r.resp[k]):'Sem registro nesta etapa.'}</div></div></div>`).join('')}</div>`}
+function entSteps(e){
+  const NQ=D.roteiro.perguntas.length,fin=['Deferido','Indeferido','Cancelado'].includes(e.status);
+  const L=[{t:'Processo',ok:true},
+    {t:'Roteiro',ok:!!(e.reg&&e.reg.filled),sub:e.reg?`${e.reg.filled}/${NQ}`:'',dica:'registrar as anotações da entrevista.',
+      act:e.reg?`<button class="btn sm pri" data-edit="regfe:${D.roteiro.registros.indexOf(e.reg)}:${e.id}">${ic('edit')}Preencher roteiro</button>`:`<button class="btn sm pri" data-edit="regent:${e.id}">${ic('plus')}Criar registro</button>`},
+    {t:'Resultado',ok:fin,sub:fin?e.status:'',dica:'marcar a aprovação e o resultado.',act:`<button class="btn sm pri" data-edit="ent:${e.id}">${ic('edit')}Registrar resultado</button>`},
+    {t:'Despacho',ok:!!(e.desp&&e.desp.salvoEm),skip:e.status==='Cancelado',dica:'gerar o rascunho do despacho e colar no SEI.',act:despPronto(e)?`<button class="btn sm pri" data-desp="${D.entrevistas.indexOf(e)}">${ic('file')}Gerar rascunho</button>`:''},
+    {t:'Controle FCs',ok:!!e.fcRef,skip:fin&&e.status!=='Deferido',dica:'incluir o servidor no controle de FCs/GRGs.',act:e.status==='Deferido'?`<button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button>`:''}];
+  const nx=L.findIndex(x=>!x.ok&&!x.skip);
+  return `<div class="esteps">${L.map((x,k)=>`<div class="es ${x.ok?'ok':x.skip?'skip':k===nx?'now':''}"><span>${x.ok?ic('check'):k+1}</span><b>${x.t}</b>${x.sub?`<em>${esc(x.sub)}</em>`:''}</div>`).join('')}</div>
+  ${nx>=0?`<div class="es-next"><span><b>Próximo passo:</b> ${L[nx].dica}</span>${canEdit()||L[nx].t==='Despacho'?L[nx].act||'':''}</div>`:'<div class="es-next ok"><b>Tudo concluído</b> para esta entrevista.</div>'}`;
+}
+function reopenEnt(id){const i=D.entrevistas.findIndex(y=>y.id===id);if(i>=0)openEnt(i)}
 function openEnt(i){
   const e=D.entrevistas[i];if(!e)return;
   const kv=(l,v)=>`<div><span class="k">${l}</span>${v||'<span class="muted">—</span>'}</div>`;
   const dt=v=>/^\d{4}/.test(v)?isoBR(v):esc(v);
   openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">Entrevista FC/GRG</div><h3>${esc(e.nome)}</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${stat(e.status)}${e.grau?`<span class="tag">${esc(e.grau)}</span>`:''}</div></div><button class="btn sm" data-report="entrevista:${e.id}" title="Relatório da entrevista">${ic('printer')}Relatório</button><button class="btn sm" data-edit="ent:${e.id}">${ic('edit')}Editar</button><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
-  <div class="dr-b"><div class="kv">${kv('Órgão',esc(e.org))}${kv('Unidade',esc(e.uni))}${kv('Processo SEI',`<span class="mono">${esc(e.sei)}</span>`)}${kv('Escolaridade',esc(e.esc))}${kv('Data de envio',dt(e.env))}${kv('Data da entrevista',dt(e.ent))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',esc(e.res||'Em andamento'))}</div>
+  <div class="dr-b">${entSteps(e)}<div class="kv">${kv('Órgão',esc(e.org))}${kv('Unidade',esc(e.uni))}${kv('Processo SEI',`<span class="mono">${esc(e.sei)}</span>`)}${kv('Escolaridade',esc(e.esc))}${kv('Data de envio',dt(e.env))}${kv('Data da entrevista',dt(e.ent))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',esc(e.res||'Em andamento'))}</div>
   ${e.obs?`<div class="sec-t">Observações e encaminhamentos</div><div class="obs">${esc(e.obs)}</div>`:''}
+  <div class="sec-t">Registro do roteiro de entrevista</div>
+  ${e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro encontrado no roteiro</b><span>${esc(e.reg.nome)} · ${e.reg.filled} de ${D.roteiro.perguntas.length} etapas registradas</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg)}))}'>Abrir registro ${ic('arrow')}</button></div><details class="regdet"><summary>Ver as anotações das ${D.roteiro.perguntas.length} etapas</summary>${regHTML(e.reg)}</details>`
+    :`<div class="linkbox">${ic('list')}<div><b>Sem registro no roteiro</b><span>Nenhum registro com o nome deste candidato foi encontrado.</span></div><button class="btn sm pri" data-edit="regent:${e.id}">${ic('plus')}Criar registro</button></div>`}
   <div class="sec-t">Pós-entrevista</div>
   ${despPronto(e)?`<div class="linkbox ${e.status==='Deferido'?'ok':''}">${ic('file')}<div><b>Despacho de devolutiva</b><span>${e.desp&&e.desp.salvoEm?'Dados salvos em '+esc(isoBR(e.desp.salvoEm))+'. ':''}Gera o rascunho para copiar e colar no SEI, com ${e.status==='Indeferido'?'objeção':'“não apresentamos objeção”'} marcado.</span></div><button class="btn sm pri" data-desp="${i}">${ic('file')}Gerar rascunho</button></div>`
     :`<div class="linkbox">${ic('file')}<div><b>Despacho de devolutiva</b><span>Fica disponível quando a aprovação na entrevista ou o resultado for registrado.</span></div></div>`}
   <div class="sec-t">Controle de FCs e GRGs</div>
   ${e.fcRef?`<div class="linkbox ok">${ic('award')}<div><b>Incluído no controle</b><span>${esc(fcShort(e.fcRef.fc))} · ${fmtBRL(e.fcRef.valor)} por mês · ${esc(e.fcRef.org)}</span></div><button class="btn sm" data-go="fcs" data-opts='${esc(JSON.stringify({q:e.fcRef.nome,org:'',vinc:'',lvl:''}))}'>Ver no controle ${ic('arrow')}</button></div>`
     :e.status==='Deferido'?`<div class="linkbox warn">${ic('award')}<div><b>Deferido, mas fora do controle</b><span>Inclua o servidor no controle com o grau ${esc(e.grau||'—')} e o valor ${fmtBRL(e.valor!=null&&e.valor!==''?e.valor:VALOR_NIVEL[lvlOf(e.grau)]||0)}.</span></div><button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button></div>`
-    :`<div class="linkbox">${ic('award')}<div><b>Aguardando deferimento</b><span>${e.fcAuto===false?'A inclusão automática está desligada para esta entrevista.':'Quando o resultado for “Deferido”, o servidor entra no controle automaticamente, com o valor do grau.'}</span></div></div>`}
-  <div class="sec-t">Registro do roteiro de entrevista</div>
-  ${e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro encontrado no roteiro</b><span>${esc(e.reg.nome)} · ${e.reg.filled} de ${D.roteiro.perguntas.length} etapas registradas</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg)}))}'>Abrir registro ${ic('arrow')}</button></div>${regHTML(e.reg)}`
-    :`<div class="linkbox">${ic('list')}<div><b>Sem registro no roteiro</b><span>Nenhum registro com o nome deste candidato foi encontrado.</span></div><button class="btn sm pri" data-edit="regent:${e.id}">${ic('plus')}Criar registro</button></div>`}</div>`);
+    :`<div class="linkbox">${ic('award')}<div><b>Aguardando deferimento</b><span>${e.fcAuto===false?'A inclusão automática está desligada para esta entrevista.':'Quando o resultado for “Deferido”, o servidor entra no controle automaticamente, com o valor do grau.'}</span></div></div>`}</div>`);
 }
 
 /* ---- Pós-entrevista: rascunho do despacho SEI ---- */
@@ -1640,7 +1665,7 @@ function openDesp(i){
 function despAtualiza(){const el=$('#dpPrev');if(el&&DP)el.innerHTML=despHTML(despBlocos(DP.e,DP.f))}
 function despCopiar(){
   if(!DP)return;const B=despBlocos(DP.e,DP.f),html=despHTML(B),txt=despTexto(B);
-  const ok=()=>toast('Despacho copiado. No SEI, cole com Ctrl+V.');
+  const ok=()=>{toast('Despacho copiado. No SEI, cole com Ctrl+V.');if(canEdit()&&!(DP.e.desp&&DP.e.desp.salvoEm)){DP.e.desp=Object.assign({},DP.f,{salvoEm:new Date().toISOString().slice(0,10)});persist('Despacho preparado: '+DP.e.nome)}};
   const fallback=()=>{const d=document.createElement('div');d.contentEditable='true';d.style.cssText='position:fixed;left:-9999px;top:0';d.innerHTML=html;document.body.appendChild(d);const r=document.createRange();r.selectNodeContents(d);const s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');ok()}catch(_){toast('Não foi possível copiar. Selecione a prévia e copie.')}s.removeAllRanges();d.remove()};
   try{if(navigator.clipboard&&window.ClipboardItem){navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]).then(ok,fallback);return}}catch(_){}
   fallback();
@@ -1789,9 +1814,9 @@ function saveForm(){
   const v=readForm();
   const miss=FORM.fields.filter(f=>f.req&&!S(v[f.k]));
   if(miss.length){toast('Preencha: '+miss.map(f=>f.label).join(', '));return}
-  const msg=FORM.onSave(v);
+  const msg=FORM.onSave(v),after=FORM.after;
   persist(msg||('Alterado: '+FORM.title));
-  closeAll();render();toast('Salvo');
+  closeAll();render();toast('Salvo');if(after)after();
 }
 function delForm(btn){
   if(!btn.classList.contains('arm')){btn.classList.add('arm');btn.innerHTML=ic('trash')+'Confirmar exclusão';setTimeout(()=>{if(btn.isConnected){btn.classList.remove('arm');btn.innerHTML=ic('trash')+'Excluir'}},4000);return}
@@ -1867,13 +1892,13 @@ const EDIT={
       onDelete:x?()=>{D.fcs.splice(D.fcs.indexOf(x),1);return 'Gratificado excluído: '+x.nome}:null});
   },
   ent(id){
-    const e=id?D.entrevistas.find(y=>y.id===+id):null;
+    const e=id?D.entrevistas.find(y=>y.id===+id):null;let savedId=null;
     const sn=[['','—'],'Sim','Não','Sim. Com ressalva'];
     openForm({eyebrow:'Entrevistas FCs e GRGs',title:e?e.nome:'Nova entrevista',when:e&&e.upd,values:e?{...e,nome:e.nome==='(não informado)'?'':e.nome,fcAuto:e.fcAuto!==false}:{esc:'Superior',fcAuto:true},
-      fields:[{k:'nome',label:'Servidor',full:1,req:1},{k:'org',label:'Órgão',type:'combo',options:uniq(D.entrevistas.map(y=>y.org).concat(siglas()))},{k:'uni',label:'Unidade'},
+      fields:[{section:'1. Processo recebido'},{k:'nome',label:'Servidor',full:1,req:1},{k:'org',label:'Órgão',type:'combo',options:uniq(D.entrevistas.map(y=>y.org).concat(siglas()))},{k:'uni',label:'Unidade'},
         {k:'sei',label:'Nº processo SEI'},{k:'grau',label:'Grau FCRG/GRG',type:'combo',options:['FCRG-1','FCRG-2','FCRG-3','FCRG-4','FCRG-5','GRG-1','GRG-2','GRG-3','GRG-4','GRG-5']},
-        {k:'env',label:'Data de envio',type:'date'},{k:'ent',label:'Data da entrevista',type:'date'},
-        {k:'esc',label:'Escolaridade',type:'combo',options:['Superior','Médio']},{k:'exp',label:'Experiência',type:'select',options:sn},
+        {k:'env',label:'Data de envio',type:'date'},{k:'esc',label:'Escolaridade',type:'combo',options:['Superior','Médio']},
+        {section:'2. Depois da entrevista (pode deixar para depois)'},{k:'ent',label:'Data da entrevista',type:'date'},{k:'exp',label:'Experiência',type:'select',options:sn},
         {k:'hab',label:'Habilitação de documentos',type:'select',options:sn},{k:'apr',label:'Aprovação na entrevista',type:'select',options:sn},
         {k:'res',label:'Resultado',type:'select',options:[['','Em andamento'],'Deferido','Indeferido','Cancelado']},
         {k:'obs',label:'Observações e encaminhamentos',type:'textarea',rows:4},
@@ -1883,10 +1908,11 @@ const EDIT={
         {k:'cargo',label:'Cargo principal'},{k:'lot',label:'Unidade de lotação'},{k:'email',label:'E-mail'},{k:'cel',label:'Celular'}],
       onSave:v=>{const data={...v,grau:v.grau?fcLabel(v.grau):'',upd:new Date().toISOString()};
         let x=e;if(x)Object.assign(x,data);else{x={id:uid(),...data};D.entrevistas.push(x)}
-        derive();let extra='';
+        savedId=x.id;derive();let extra='';
         if(x.status==='Deferido'&&x.fcAuto!==false){const r=fcFromEnt(x);if(r)extra=r}
         return (e?'Entrevista atualizada: ':'Nova entrevista: ')+v.nome+extra},
-      onDelete:e?()=>{D.entrevistas.splice(D.entrevistas.indexOf(e),1);return 'Entrevista excluída: '+e.nome}:null});
+      after:()=>reopenEnt(savedId),
+      onDelete:e?()=>{savedId=null;D.entrevistas.splice(D.entrevistas.indexOf(e),1);return 'Entrevista excluída: '+e.nome}:null});
   },
   etapa(i){
     const ro=D.roteiro;const q=i!=null&&i!==''?ro.perguntas[+i]:null;
@@ -1897,7 +1923,8 @@ const EDIT={
         ro.perguntas.splice(pos,0,{id:uid(),t:v.t,det:v.det,upd:new Date().toISOString()});ro.registros.forEach(r=>r.resp.splice(pos,0,''));return 'Nova etapa no roteiro'},
       onDelete:q?()=>{const k=+i;ro.perguntas.splice(k,1);ro.registros.forEach(r=>r.resp.splice(k,1));return 'Etapa removida do roteiro'}:null});
   },
-  reg(i,pre){
+  regfe(i,entId){EDIT.reg(i,null,+entId)},
+  reg(i,pre,backId){
     const ro=D.roteiro;const r=i!=null&&i!==''?ro.registros[+i]:null;
     const vals=r?{nome:r.nome,org:regOrg(r),data:r.data||'',proc:r.proc}:{...(pre||{})};ro.perguntas.forEach((q,k)=>vals['r'+k]=r?r.resp[k]:'');
     openForm({eyebrow:'Registro de entrevista',title:r?r.nome:'Novo registro',when:r&&r.upd,values:vals,
@@ -1906,8 +1933,9 @@ const EDIT={
         const org=sigOf(v.org);
         if(r){Object.assign(r,{nome:v.nome,org,extra:org,data:v.data,proc:v.proc,resp,upd:new Date().toISOString()});return 'Registro atualizado: '+v.nome}
         const nr={id:uid(),nome:v.nome,org,extra:org,data:v.data,proc:v.proc,resp,upd:new Date().toISOString()};ro.registros.push(nr);
-        if(pre&&pre.entId){const e=D.entrevistas.find(y=>y.id===pre.entId);if(e)e.regId=nr.id}
+        if(pre&&pre.entId){const e=D.entrevistas.find(y=>y.id===pre.entId);if(e){e.regId=nr.id;if(!e.ent&&v.data)e.ent=v.data}}
         st.f.roteiro.sel=ro.registros.length-1;st.f.roteiro.q='';st.f.roteiro.org='';return 'Novo registro de entrevista: '+v.nome},
+      after:pre&&pre.entId?()=>reopenEnt(pre.entId):backId?()=>reopenEnt(backId):null,
       onDelete:r?()=>{ro.registros.splice(+i,1);st.f.roteiro.sel=-1;return 'Registro excluído: '+r.nome}:null});
   },
   visita(id){
