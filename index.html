@@ -734,6 +734,32 @@ html:not(.can-edit) [data-edit],html:not(.can-edit) .ebtn{display:none!important
 .es-next{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;justify-content:space-between}
 .regdet{margin:.5rem 1.25rem 0}.regdet>summary{cursor:pointer;font-size:.78rem;font-weight:600;color:var(--info);padding:.25rem 0}
 .regdet[open]>summary{margin-bottom:.25rem}
+#conduct{position:fixed;inset:0;z-index:95;background:var(--bg);display:none;flex-direction:column}
+#conduct.on{display:flex}
+.cd-top{display:flex;align-items:center;gap:1rem;padding:.875rem 1.5rem;border-bottom:1px solid var(--line);background:var(--surface);flex-wrap:wrap}
+.cd-who{flex:1;min-width:12rem}.cd-who .eyebrow{font-size:.6562rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
+.cd-who h2{margin:.125rem 0;font-size:1.25rem;letter-spacing:-.02em}.cd-meta{font-size:.75rem;color:var(--muted)}
+.cd-date{display:flex;flex-direction:column;gap:.2rem;font-size:.6875rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2)}
+.cd-date input{padding:.375rem .625rem;border:1px solid var(--line);border-radius:.625rem;background:var(--surface);font:inherit;text-transform:none;letter-spacing:0;font-weight:500}
+.cd-prog{display:flex;flex-direction:column;gap:.3rem;min-width:9rem;font-size:.6875rem;color:var(--muted)}
+.cd-bar{display:block;width:100%;height:.375rem;border-radius:999px;background:var(--surface-3);overflow:hidden}.cd-bar i{display:block;height:100%;width:0;background:var(--brand);border-radius:999px;transition:width .2s}
+.cd-st{font-size:.75rem;color:var(--muted);min-width:5.5rem;text-align:right}
+.cd-body{flex:1;min-height:0;display:grid;grid-template-columns:17rem minmax(0,1fr)}
+.cd-nav{overflow:auto;padding:1rem .75rem;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:.25rem}
+.cd-nav button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;gap:.625rem;align-items:flex-start;padding:.5rem .625rem;border-radius:.75rem;font-size:.75rem;color:var(--ink-2)}
+.cd-nav button:hover{background:var(--surface-3)}
+.cd-nav span{flex:none;width:1.375rem;height:1.375rem;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:.6875rem;background:var(--surface-3);color:var(--muted)}
+.cd-nav button.ok span{background:var(--brand);color:#fff}.cd-nav em{font-style:normal;line-height:1.35}
+.cd-main{overflow:auto;padding:1.25rem 2rem 4rem;scroll-padding-top:1rem}
+.cd-tip{max-width:52rem;margin:0 0 1rem;font-size:.8125rem;color:var(--ink-2)}
+.cd-q{max-width:52rem;background:var(--surface-2);border-radius:1.25rem;padding:1.125rem 1.25rem;margin-bottom:1rem}
+.cd-h{display:flex;gap:.75rem;align-items:flex-start}.cd-h .n{flex:none;width:1.75rem;height:1.75rem;border-radius:50%;display:grid;place-items:center;background:var(--navy);color:#fff;font-weight:700;font-size:.8125rem}
+.cd-h h3{margin:.125rem 0 0;font-size:.9375rem;line-height:1.4;font-weight:600}
+.cd-det{margin:.625rem 0 0 2.5rem;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:.375rem}
+.cd-det li{font-size:.72rem;padding:.25rem .625rem;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink-2)}
+.cd-q textarea{display:block;width:100%;margin-top:.75rem;padding:.75rem .875rem;border:1px solid var(--line);border-radius:.875rem;background:var(--surface);font:inherit;font-size:.875rem;line-height:1.5;resize:vertical;min-height:6rem;color:var(--ink)}
+.cd-q textarea:focus{outline:2px solid var(--brand);outline-offset:0;border-color:transparent}
+@media (max-width:900px){.cd-body{grid-template-columns:1fr}.cd-nav{display:none}.cd-main{padding:1rem}.cd-top{display:grid;grid-template-columns:auto 1fr;padding:.625rem 1rem;gap:.5rem .75rem}.cd-who{min-width:0}.cd-who h2{font-size:1rem}.cd-date{grid-column:1/-1;flex-direction:row;align-items:center;gap:.5rem}.cd-prog{grid-column:1/-1;min-width:0}.cd-st{grid-column:1;text-align:left;min-width:0;align-self:center}.cd-top [data-cdsave]{grid-column:2;justify-self:end}.cd-tip{display:none}.cd-h h3{font-size:.875rem}}
 </style>
 </head>
 <body>
@@ -1545,8 +1571,8 @@ function regHTML(r){return `<div class="steps">${D.roteiro.perguntas.map((q,k)=>
 function entSteps(e){
   const NQ=D.roteiro.perguntas.length,fin=['Deferido','Indeferido','Cancelado'].includes(e.status);
   const L=[{t:'Processo',ok:true},
-    {t:'Roteiro',ok:!!(e.reg&&e.reg.filled),sub:e.reg?`${e.reg.filled}/${NQ}`:'',dica:'registrar as anotações da entrevista.',
-      act:e.reg?`<button class="btn sm pri" data-edit="regfe:${D.roteiro.registros.indexOf(e.reg)}:${e.id}">${ic('edit')}Preencher roteiro</button>`:`<button class="btn sm pri" data-edit="regent:${e.id}">${ic('plus')}Criar registro</button>`},
+    {t:'Roteiro',ok:!!(e.reg&&e.reg.filled),sub:e.reg?`${e.reg.filled}/${NQ}`:'',dica:'conduzir a entrevista pelo roteiro e anotar as respostas.',
+      act:`<button class="btn sm pri" data-cd="${e.id}">${ic('list')}${e.reg?'Continuar entrevista':'Conduzir entrevista'}</button>`},
     {t:'Resultado',ok:fin,sub:fin?e.status:'',dica:'marcar a aprovação e o resultado.',act:`<button class="btn sm pri" data-edit="ent:${e.id}">${ic('edit')}Registrar resultado</button>`},
     {t:'Despacho',ok:!!(e.desp&&e.desp.salvoEm),skip:e.status==='Cancelado',dica:'gerar o rascunho do despacho e colar no SEI.',act:despPronto(e)?`<button class="btn sm pri" data-desp="${D.entrevistas.indexOf(e)}">${ic('file')}Gerar rascunho</button>`:''},
     {t:'Controle FCs',ok:!!e.fcRef,skip:fin&&e.status!=='Deferido',dica:'incluir o servidor no controle de FCs/GRGs.',act:e.status==='Deferido'?`<button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button>`:''}];
@@ -1563,8 +1589,8 @@ function openEnt(i){
   <div class="dr-b">${entSteps(e)}<div class="kv">${kv('Órgão',esc(e.org))}${kv('Unidade',esc(e.uni))}${kv('Processo SEI',`<span class="mono">${esc(e.sei)}</span>`)}${kv('Escolaridade',esc(e.esc))}${kv('Data de envio',dt(e.env))}${kv('Data da entrevista',dt(e.ent))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',esc(e.res||'Em andamento'))}</div>
   ${e.obs?`<div class="sec-t">Observações e encaminhamentos</div><div class="obs">${esc(e.obs)}</div>`:''}
   <div class="sec-t">Registro do roteiro de entrevista</div>
-  ${e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro encontrado no roteiro</b><span>${esc(e.reg.nome)} · ${e.reg.filled} de ${D.roteiro.perguntas.length} etapas registradas</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg)}))}'>Abrir registro ${ic('arrow')}</button></div><details class="regdet"><summary>Ver as anotações das ${D.roteiro.perguntas.length} etapas</summary>${regHTML(e.reg)}</details>`
-    :`<div class="linkbox">${ic('list')}<div><b>Sem registro no roteiro</b><span>Nenhum registro com o nome deste candidato foi encontrado.</span></div><button class="btn sm pri" data-edit="regent:${e.id}">${ic('plus')}Criar registro</button></div>`}
+  ${e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro encontrado no roteiro</b><span>${esc(e.reg.nome)} · ${e.reg.filled} de ${D.roteiro.perguntas.length} etapas registradas</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg)}))}'>Abrir registro ${ic('arrow')}</button>${canEdit()?`<button class="btn sm" data-cd="${e.id}">${ic('edit')}Anotar</button>`:''}</div><details class="regdet"><summary>Ver as anotações das ${D.roteiro.perguntas.length} etapas</summary>${regHTML(e.reg)}</details>`
+    :`<div class="linkbox">${ic('list')}<div><b>Entrevista ainda não conduzida</b><span>Abra o roteiro para fazer as perguntas e anotar as respostas. As anotações viram o registro desta entrevista.</span></div><button class="btn sm pri" data-cd="${e.id}">${ic('list')}Conduzir entrevista</button></div>`}
   <div class="sec-t">Pós-entrevista</div>
   ${despPronto(e)?`<div class="linkbox ${e.status==='Deferido'?'ok':''}">${ic('file')}<div><b>Despacho de devolutiva</b><span>${e.desp&&e.desp.salvoEm?'Dados salvos em '+esc(isoBR(e.desp.salvoEm))+'. ':''}Gera o rascunho para copiar e colar no SEI, com ${e.status==='Indeferido'?'objeção':'“não apresentamos objeção”'} marcado.</span></div><button class="btn sm pri" data-desp="${i}">${ic('file')}Gerar rascunho</button></div>`
     :`<div class="linkbox">${ic('file')}<div><b>Despacho de devolutiva</b><span>Fica disponível quando a aprovação na entrevista ou o resultado for registrado.</span></div></div>`}
@@ -1684,6 +1710,69 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-desp],[data-dpcopy],[data-dpsave]');if(!b)return;e.preventDefault();
   if(b.dataset.desp!=null)openDesp(+b.dataset.desp);else if(b.dataset.dpcopy!=null)despCopiar();else despSalvar();
 });
+
+/* ---- Conduzir entrevista: roteiro na tela com espaço para as anotações ---- */
+let CD=null,cdT=null;
+const cdKey=id=>'conecta-cd-'+id;
+function openConduct(entId){
+  const e=D.entrevistas.find(y=>y.id===+entId);if(!e)return;
+  const ro=D.roteiro,NQ=ro.perguntas.length,r=e.reg;
+  let resp=ro.perguntas.map((q,k)=>r?S(r.resp[k]):'');
+  try{const d=JSON.parse(localStorage.getItem(cdKey(e.id))||'null');if(d&&Array.isArray(d.resp)&&d.resp.length===NQ&&d.resp.some(Boolean))resp=d.resp}catch(_){}
+  CD={id:e.id,resp,data:(r&&r.data)||(/^\d{4}-\d{2}-\d{2}/.test(S(e.ent))?S(e.ent).slice(0,10):new Date().toISOString().slice(0,10)),dirty:false};
+  closeAll();
+  let el=$('#conduct');if(!el){el=document.createElement('div');el.id='conduct';el.setAttribute('role','dialog');el.setAttribute('aria-label','Conduzir entrevista');document.body.appendChild(el)}
+  const ro_=!canEdit();
+  el.innerHTML=`<div class="cd-top">
+    <button class="btn icon" data-cdclose aria-label="Fechar" title="Fechar">${ic('x')}</button>
+    <div class="cd-who"><div class="eyebrow">${ro_?'Roteiro da entrevista (somente leitura)':'Conduzindo a entrevista'}</div><h2>${esc(e.nome)}</h2><div class="cd-meta">${[e.org,e.grau,e.sei?'SEI '+e.sei:''].filter(Boolean).map(esc).join(' · ')}</div></div>
+    <label class="cd-date"><span>Data</span><input type="date" data-cddate value="${esc(CD.data)}"${ro_?' disabled':''}></label>
+    <div class="cd-prog"><span class="cd-bar"><i id="cdBar"></i></span><span id="cdCnt"></span></div>
+    <span class="cd-st" id="cdSt" aria-live="polite"></span>
+    ${ro_?'':`<button class="btn pri" data-cdsave>${ic('check')}Salvar e fechar</button>`}
+  </div>
+  <div class="cd-body">
+    <nav class="cd-nav">${ro.perguntas.map((q,k)=>`<button data-cdgo="${k}" id="cdn${k}"><span>${k+1}</span><em>${esc(S(q.t).length>48?S(q.t).slice(0,46)+'…':S(q.t))}</em></button>`).join('')}</nav>
+    <div class="cd-main" id="cdMain">
+      <p class="cd-tip">${ro_?'Somente administradores podem anotar.':'Siga as etapas e anote o que a pessoa responder. As anotações são salvas sozinhas enquanto você digita e viram o registro do roteiro desta entrevista.'}</p>
+      ${ro.perguntas.map((q,k)=>`<section class="cd-q" id="cdq${k}"><div class="cd-h"><span class="n">${k+1}</span><h3>${esc(q.t)}</h3></div>
+        ${q.det&&q.det.length?`<ul class="cd-det">${q.det.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}
+        <textarea data-cdk="${k}" rows="4" placeholder="Anotações da banca nesta etapa"${ro_?' readonly':''}>${esc(CD.resp[k])}</textarea></section>`).join('')}
+    </div>
+  </div>`;
+  el.classList.add('on');document.body.style.overflow='hidden';cdProg();
+  setTimeout(()=>{const t=el.querySelector('textarea');t&&!ro_&&t.focus()},60);
+}
+function cdProg(){if(!CD)return;const n=CD.resp.filter(x=>S(x)).length,N=CD.resp.length;
+  const b=$('#cdBar');if(b)b.style.width=(N?Math.round(n/N*100):0)+'%';const c=$('#cdCnt');if(c)c.textContent=`${n} de ${N} etapas anotadas`;
+  CD.resp.forEach((x,k)=>{const a=$('#cdn'+k);a&&a.classList.toggle('ok',!!S(x))})}
+function cdSave(){
+  if(!CD||!canEdit())return;
+  const e=D.entrevistas.find(y=>y.id===CD.id);if(!e)return;
+  const ro=D.roteiro,now=new Date().toISOString();let r=e.reg,msg=null;
+  if(!r){r={id:uid(),nome:e.nome,org:sigOf(e.org),extra:sigOf(e.org),data:CD.data,proc:e.sei,resp:CD.resp.slice(),upd:now};ro.registros.push(r);e.regId=r.id;msg='Entrevista registrada no roteiro: '+e.nome}
+  else Object.assign(r,{resp:CD.resp.slice(),data:CD.data,upd:now});
+  if(!e.ent&&CD.data)e.ent=CD.data;
+  persist(msg);CD.dirty=false;
+  try{localStorage.removeItem(cdKey(e.id))}catch(_){}
+  const s=$('#cdSt');if(s)s.textContent='Salvo '+new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+}
+function closeConduct(){
+  clearTimeout(cdT);if(CD&&CD.dirty)cdSave();
+  const id=CD&&CD.id;CD=null;const el=$('#conduct');if(el){el.classList.remove('on');el.innerHTML=''}document.body.style.overflow='';
+  if(id!=null){render();reopenEnt(id)}
+}
+document.addEventListener('input',e=>{const t=e.target;if(!CD)return;
+  if(t.dataset.cdk!=null){CD.resp[+t.dataset.cdk]=t.value}else if(t.dataset.cddate!=null){CD.data=t.value}else return;
+  CD.dirty=true;cdProg();try{localStorage.setItem(cdKey(CD.id),JSON.stringify({resp:CD.resp}))}catch(_){}
+  const s=$('#cdSt');if(s)s.textContent='Salvando…';clearTimeout(cdT);cdT=setTimeout(cdSave,2500)});
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-cd],[data-cdsave],[data-cdclose],[data-cdgo]');if(!b)return;e.preventDefault();
+  if(b.dataset.cd!=null)openConduct(+b.dataset.cd);
+  else if(b.dataset.cdgo!=null){const q=$('#cdq'+b.dataset.cdgo);if(q){q.scrollIntoView({behavior:'smooth',block:'start'});const t=q.querySelector('textarea');t&&setTimeout(()=>t.focus({preventScroll:true}),350)}}
+  else closeConduct();
+});
+document.addEventListener('keydown',e=>{if(CD&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();closeConduct()}},true);
 
 /* ---- Roteiro ---- */
 function regOrg(r){if(r.org)return r.org;if(S(r.extra))return sigOf(r.extra);const e=D.entrevistas.find(x=>x.reg===r);return e?sigOf(e.org):''}
