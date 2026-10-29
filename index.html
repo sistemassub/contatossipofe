@@ -761,6 +761,12 @@ html:not(.can-edit) [data-edit],html:not(.can-edit) .ebtn{display:none!important
 .cd-q textarea:focus{outline:2px solid var(--brand);outline-offset:0;border-color:transparent}
 @media (max-width:900px){.cd-body{grid-template-columns:1fr}.cd-nav{display:none}.cd-main{padding:1rem}.cd-top{display:grid;grid-template-columns:auto 1fr;padding:.625rem 1rem;gap:.5rem .75rem}.cd-who{min-width:0}.cd-who h2{font-size:1rem}.cd-date{grid-column:1/-1;flex-direction:row;align-items:center;gap:.5rem}.cd-prog{grid-column:1/-1;min-width:0}.cd-st{grid-column:1;text-align:left;min-width:0;align-self:center}.cd-top [data-cdsave]{grid-column:2;justify-self:end}.cd-tip{display:none}.cd-h h3{font-size:.875rem}}
 .fnote{grid-column:1/-1;display:flex;gap:.625rem;align-items:flex-start;padding:.75rem .875rem;border-radius:.875rem;background:var(--blue-soft);color:var(--ink-2);font-size:.78rem;line-height:1.45}.fnote svg.i{color:var(--info);margin-top:.1rem;flex:none}
+.sfc{padding:.5rem 1.25rem 1rem}.sfc-g{margin-top:.75rem;background:var(--surface-2);border-radius:1rem;padding:.5rem .75rem}
+.sfc-h{display:flex;align-items:center;gap:.5rem;padding:.375rem .25rem;font-size:.8125rem}.sfc-h span{color:var(--muted);font-size:.75rem}
+.sfc-all{margin-left:auto;display:flex;gap:.375rem;align-items:center;font-size:.75rem;color:var(--ink-2);cursor:pointer}
+.sfc-i{display:flex;gap:.625rem;align-items:flex-start;padding:.5rem .25rem;border-top:1px solid var(--line-2);cursor:pointer}
+.sfc-i input,.sfc-all input{accent-color:var(--brand);width:1rem;height:1rem;margin-top:.1rem;flex:none}
+.sfc-i b{display:block;font-size:.8125rem;font-weight:600}.sfc-i em{display:block;font-style:normal;font-size:.72rem;color:var(--muted)}
 </style>
 </head>
 <body>
@@ -1481,7 +1487,9 @@ R.contatos=()=>{
       <div class="od-meta"><div><span>Tipo de entidade</span><b>${esc(o.tipo)||'—'}</b></div><div><span>Unidade SEI</span><b>${escBR(o.sei)||'—'}</b></div><div><span>Contatos</span><b>${o.ps.length}</b></div><div><span>Pontos focais</span><b class="${nf?'':'warnt'}">${nf||'Nenhum'}</b></div></div>
       <div class="pcards">${ps.map(card).join('')||'<div class="empty">Nenhum contato cadastrado neste órgão.</div>'}</div></section></div>`;
   }
-  return pageHead('contatos',exportMenu('contatos')+addBtn('orgao:','Novo órgão'))+stats+bar+body;
+  const fora=F&&canEdit()?fcsForaDosContatos():[];
+  const aviso=fora.length?`<div class="linkbox warn" style="margin:0 0 1rem">${ic('award')}<div><b>${plural(fora.length,'servidor do Controle de FCs não aparece','servidores do Controle de FCs não aparecem')} nos contatos do órgão</b><span>${esc(fora.slice(0,4).map(x=>tc(x.nome)+' ('+x.org+')').join(', '))}${fora.length>4?'…':''}</span></div><button class="btn sm pri" data-syncfc>${ic('plus')}Revisar e incluir</button></div>`:'';
+  return pageHead('contatos',exportMenu('contatos')+addBtn('orgao:','Novo órgão'))+aviso+stats+bar+body;
 };
 
 /* ---- GECEG ---- */
@@ -1919,6 +1927,37 @@ const tiposEnt=()=>uniq(D.contatos.map(o=>o.tipo).filter(Boolean)).sort();
 const siglas=()=>uniq(D.contatos.map(o=>o.sigla).concat(D.fcs.map(x=>x.org))).filter(Boolean).sort();
 
 function sigOf(org){const t=S(org).split('/')[0].trim();const k=norm(t);const o=D.contatos.find(c=>norm(c.sigla)===k)||D.contatos.find(c=>norm(c.ent)===k);return o?o.sigla:t.toUpperCase()}
+/* ---- Controle de FCs ligado aos Contatos ---- */
+function orgDoFc(x){const k=sk(x.org);return k?D.contatos.find(o=>sk(o.sigla)===k)||null:null}
+function pessoaDoFc(o,x){const em=norm(x.email);return o.pessoas.find(p=>samePerson(p.nome,x.nome)||(em&&EMAIL_RE.test(S(x.email))&&norm(p.email)===em))||null}
+function fcsForaDosContatos(){return D.fcs.filter(x=>{if(x.semContato)return false;const o=orgDoFc(x);return o&&!pessoaDoFc(o,x)})}
+function syncFcContato(x){
+  const o=orgDoFc(x);if(!o)return 'sem-org';
+  let p=pessoaDoFc(o,x);
+  if(!p&&x.semContato)return 'ignorado';
+  if(!p){o.pessoas.push({id:uid(),nome:tc(x.nome),email:S(x.email),cel:S(x.cel),cargo:S(x.cargo),funcao:'',lot:S(x.lot),focal:false,fc:x.fc||''});return 'novo'}
+  let ch=false;if(x.fc&&lvlOf(p.fc)!==lvlOf(x.fc)){p.fc=x.fc;ch=true}
+  ['email','cel','cargo','lot'].forEach(k=>{if(!S(p[k])&&S(x[k])){p[k]=x[k];ch=true}});
+  return ch?'atualizado':'ok';
+}
+function openSyncFc(){
+  if(!canEdit()){toast('Só administradores podem editar.');return}
+  const fora=fcsForaDosContatos();if(!fora.length){toast('Os contatos já estão em dia com o controle de FCs');return}
+  const by={};fora.forEach(x=>{(by[sk(x.org)]=by[sk(x.org)]||{sig:orgDoFc(x).sigla,l:[]}).l.push(x)});
+  openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">Controle de FCs → Contatos</div><h3>Incluir gratificados nos contatos</h3><div class="muted" style="font-size:.75rem">Marque quem deve aparecer nos contatos do órgão. Quem ficar desmarcado não volta a ser sugerido.</div></div><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
+  <div class="dr-b"><div class="sfc">${Object.values(by).map(g=>`<div class="sfc-g"><div class="sfc-h"><b>${esc(g.sig)}</b><span>${plural(g.l.length,'servidor','servidores')}</span><label class="sfc-all"><input type="checkbox" data-sfcall="${esc(g.sig)}" checked>todos</label></div>
+    ${g.l.map(x=>`<label class="sfc-i"><input type="checkbox" data-sfc="${x.id}" data-sfcg="${esc(g.sig)}" checked><span><b>${esc(tc(x.nome))}</b><em>${esc([fcShort(x.fc),x.cargo,x.lot].filter(Boolean).join(' · '))}</em></span></label>`).join('')}</div>`).join('')}</div></div>
+  <div class="dr-f"><span class="spacer"></span><button class="btn" data-close>Cancelar</button><button class="btn pri" data-sfcok>${ic('check')}Confirmar</button></div>`);
+}
+function confirmSyncFc(){
+  let n=0,ig=0;document.querySelectorAll('[data-sfc]').forEach(c=>{const x=D.fcs.find(y=>y.id===+c.dataset.sfc);if(!x)return;
+    if(c.checked){delete x.semContato;if(syncFcContato(x)==='novo')n++}else{x.semContato=true;ig++}});
+  persist(`Contatos x controle de FCs: ${n} incluídos${ig?`, ${ig} deixados de fora`:''}`);closeAll();render();
+  toast(`${plural(n,'servidor incluído','servidores incluídos')} nos contatos${ig?` · ${ig} deixado(s) de fora`:''}`);
+}
+document.addEventListener('change',e=>{const a=e.target.closest('[data-sfcall]');if(a)document.querySelectorAll(`[data-sfcg="${CSS.escape(a.dataset.sfcall)}"]`).forEach(c=>c.checked=a.checked)});
+document.addEventListener('click',e=>{if(e.target.closest('[data-sfcok]')){e.preventDefault();confirmSyncFc()}});
+document.addEventListener('click',e=>{if(e.target.closest('[data-syncfc]')){e.preventDefault();openSyncFc()}});
 function fcFromEnt(e){
   const lvl=lvlOf(e.grau);if(!lvl){toast('Informe o grau da gratificação para incluir no controle.');return ''}
   const valor=e.valor!=null&&e.valor!==''?+e.valor:VALOR_NIVEL[lvl]||0;
@@ -1929,7 +1968,8 @@ function fcFromEnt(e){
   if(!data.lot&&e.uni)data.lot=e.uni;
   if(x)Object.assign(x,data);else{x={id:uid(),cod:'',vinc:'',cargo:'',lot:'',email:'',cel:'',ent:o?o.ent:'',...data};D.fcs.push(x)}
   e.fcId=x.id;
-  return novo?' · incluído no controle de FCs ('+fmtBRL(valor)+')':' · controle de FCs atualizado';
+  const ct=syncFcContato(x);
+  return (novo?' · incluído no controle de FCs ('+fmtBRL(valor)+')':' · controle de FCs atualizado')+(ct==='novo'?' e nos contatos do órgão':'');
 }
 const EDIT={
   fcent(id){const e=D.entrevistas.find(y=>y.id===+id);if(!e)return;const m=fcFromEnt(e);if(!m)return;persist('Controle de FCs: '+e.nome+m);closeAll();render();toast('Incluído no controle de FCs/GRGs')},
@@ -1979,8 +2019,9 @@ const EDIT={
         {k:'fc',label:'Nível da gratificação',type:'select',options:NIVEIS},{k:'valor',label:'Valor mensal (R$)',type:'number',ph:'Automático pelo nível'},
         {k:'cargo',label:'Cargo principal',full:1},{k:'lot',label:'Unidade de lotação',full:1},{k:'email',label:'E-mail'},{k:'cel',label:'Celular'}],
       onSave:v=>{const valor=v.valor==null?VALOR_NIVEL[lvlOf(v.fc)]||0:v.valor;const data={...v,valor,upd:new Date().toISOString()};
-        if(x){Object.assign(x,data);return 'Gratificação atualizada: '+v.nome}D.fcs.push({id:uid(),...data});return 'Novo gratificado: '+v.nome},
-      onDelete:x?()=>{D.fcs.splice(D.fcs.indexOf(x),1);return 'Gratificado excluído: '+x.nome}:null});
+        let y=x;if(y)Object.assign(y,data);else{y={id:uid(),...data};D.fcs.push(y)}
+        const ct=syncFcContato(y);return (x?'Gratificação atualizada: ':'Novo gratificado: ')+v.nome+(ct==='novo'?' · incluído nos contatos do órgão':'')},
+      onDelete:x?()=>{const o=orgDoFc(x),p=o&&pessoaDoFc(o,x);if(p&&p.fc===x.fc)p.fc='';D.fcs.splice(D.fcs.indexOf(x),1);return 'Gratificado excluído: '+x.nome}:null});
   },
   ent(id){
     const e=id?D.entrevistas.find(y=>y.id===+id):null;let savedId=null;
