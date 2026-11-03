@@ -822,6 +822,7 @@ const fmtBRL=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',
 const fmtN=n=>(+n||0).toLocaleString('pt-BR');
 const isoBR=s=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(S(s));return m?`${m[3]}/${m[2]}/${m[1]}`:S(s)};
 const DIAS=['dom','seg','ter','qua','qui','sex','sáb'];
+const hojeISO=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
 const EMAIL_RE=/^[^@\s\/]+@[^@\s\/]+\.[^@\s\/]+$/;
 const matchQ=(hay,q)=>{if(!q)return true;const h=norm(hay);return norm(q).split(' ').every(t=>h.includes(t))};
 const plural=(n,a,b)=>`${fmtN(n)} ${n===1?a:b}`;
@@ -1186,7 +1187,7 @@ async function importDocs(file){
 function backupDocs(){
   const rows=[...docsOf().values()].map(d=>({colecao:d.colecao,id:d.id,ordem:d.ordem,dados:d.dados}));
   const blob=new Blob([JSON.stringify({app:'Conecta SIPOFE',gerado:new Date().toISOString(),rows})],{type:'application/json'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`conecta-sipofe-backup-${new Date().toISOString().slice(0,10)}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`conecta-sipofe-backup-${hojeISO()}.json`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
   toast(rows.length+' registros salvos no backup');
 }
 document.addEventListener('change',e=>{if(e.target.matches('.impFile')&&e.target.files[0]){importDocs(e.target.files[0]);e.target.value=''}});
@@ -1342,7 +1343,7 @@ R.home=()=>{
   const rs=D.redeStats||{};
   const full=fullAccess();
   const semFocal=D.contatos.filter(o=>!o.pessoas.some(p=>p.focal)).length;
-  const hoje=new Date().toISOString().slice(0,10);
+  const hoje=hojeISO();
   const vis=D.agenda.filter(a=>a.iso&&!/cancel/.test(norm(a.stV+' '+a.stA)));
   const prox=vis.filter(a=>a.iso>=hoje).sort((a,b)=>a.iso.localeCompare(b.iso))[0];
   const semReg=D.entrevistas.filter(e=>!e.reg&&e.nome!=='(não informado)'&&e.status!=='Cancelado').length;
@@ -1705,7 +1706,7 @@ function openDesp(i){
 function despAtualiza(){const el=$('#dpPrev');if(el&&DP)el.innerHTML=despHTML(despBlocos(DP.e,DP.f))}
 function despCopiar(){
   if(!DP)return;const B=despBlocos(DP.e,DP.f),html=despHTML(B),txt=despTexto(B);
-  const ok=()=>{toast('Despacho copiado. No SEI, cole com Ctrl+V.');if(canEdit()&&!(DP.e.desp&&DP.e.desp.salvoEm)){DP.e.desp=Object.assign({},DP.f,{salvoEm:new Date().toISOString().slice(0,10)});persist('Despacho preparado: '+DP.e.nome)}};
+  const ok=()=>{toast('Despacho copiado. No SEI, cole com Ctrl+V.');if(canEdit()&&!(DP.e.desp&&DP.e.desp.salvoEm)){DP.e.desp=Object.assign({},DP.f,{salvoEm:hojeISO()});persist('Despacho preparado: '+DP.e.nome)}};
   const fallback=()=>{const d=document.createElement('div');d.contentEditable='true';d.style.cssText='position:fixed;left:-9999px;top:0';d.innerHTML=html;document.body.appendChild(d);const r=document.createRange();r.selectNodeContents(d);const s=getSelection();s.removeAllRanges();s.addRange(r);try{document.execCommand('copy');ok()}catch(_){toast('Não foi possível copiar. Selecione a prévia e copie.')}s.removeAllRanges();d.remove()};
   try{if(navigator.clipboard&&window.ClipboardItem){navigator.clipboard.write([new ClipboardItem({'text/html':new Blob([html],{type:'text/html'}),'text/plain':new Blob([txt],{type:'text/plain'})})]).then(ok,fallback);return}}catch(_){}
   fallback();
@@ -1713,7 +1714,7 @@ function despCopiar(){
 function despSalvar(){
   if(!DP||!canEdit())return;
   try{localStorage.setItem(DESP_KEY,JSON.stringify({banca:DP.f.banca,assinatura:DP.f.assinatura}))}catch(_){}
-  DP.e.desp=Object.assign({},DP.f,{salvoEm:new Date().toISOString().slice(0,10)});
+  DP.e.desp=Object.assign({},DP.f,{salvoEm:hojeISO()});
   persist('Despacho preparado: '+DP.e.nome);toast('Dados do despacho salvos');openDesp(DP.i);
 }
 document.addEventListener('input',e=>{const t=e.target;if(!DP)return;
@@ -1732,8 +1733,11 @@ function openConduct(entId){
   const e=D.entrevistas.find(y=>y.id===+entId);if(!e)return;
   const ro=D.roteiro,NQ=ro.perguntas.length,r=e.reg;
   let resp=ro.perguntas.map((q,k)=>r?S(r.resp[k]):'');
-  try{const d=JSON.parse(localStorage.getItem(cdKey(e.id))||'null');if(d&&Array.isArray(d.resp)&&d.resp.length===NQ&&d.resp.some(Boolean))resp=d.resp}catch(_){}
-  CD={id:e.id,resp,data:(r&&r.data)||(/^\d{4}-\d{2}-\d{2}/.test(S(e.ent))?S(e.ent).slice(0,10):new Date().toISOString().slice(0,10)),dirty:false};
+  try{const d=JSON.parse(localStorage.getItem(cdKey(e.id))||'null');
+    // rascunho local só vale se for mais novo que o registro salvo no banco
+    if(d&&Array.isArray(d.resp)&&d.resp.length===NQ&&d.resp.some(Boolean)&&(!r||!r.upd||S(d.t)>S(r.upd)))resp=d.resp;
+    else if(d)localStorage.removeItem(cdKey(e.id))}catch(_){}
+  CD={id:e.id,resp,data:(r&&r.data)||(/^\d{4}-\d{2}-\d{2}/.test(S(e.ent))?S(e.ent).slice(0,10):hojeISO()),dirty:false};
   closeAll();
   let el=$('#conduct');if(!el){el=document.createElement('div');el.id='conduct';el.setAttribute('role','dialog');el.setAttribute('aria-label','Conduzir entrevista');document.body.appendChild(el)}
   const ro_=!canEdit();
@@ -1778,7 +1782,7 @@ function closeConduct(){
 }
 document.addEventListener('input',e=>{const t=e.target;if(!CD)return;
   if(t.dataset.cdk!=null){CD.resp[+t.dataset.cdk]=t.value}else if(t.dataset.cddate!=null){CD.data=t.value}else return;
-  CD.dirty=true;cdProg();try{localStorage.setItem(cdKey(CD.id),JSON.stringify({resp:CD.resp}))}catch(_){}
+  CD.dirty=true;cdProg();try{localStorage.setItem(cdKey(CD.id),JSON.stringify({resp:CD.resp,t:new Date().toISOString()}))}catch(_){}
   const s=$('#cdSt');if(s)s.textContent='Salvando…';clearTimeout(cdT);cdT=setTimeout(cdSave,2500)});
 document.addEventListener('click',e=>{
   const b=e.target.closest('[data-cd],[data-cdsave],[data-cdclose],[data-cdgo]');if(!b)return;e.preventDefault();
@@ -1970,7 +1974,15 @@ function fcFromEnt(e){
   const data={nome:e.nome,org,fc:NIVEIS[lvl-1],valor,origem:'Entrevista'+(e.sei?' · SEI '+e.sei:''),upd:new Date().toISOString()};
   ['cargo','lot','email','cel','vinc'].forEach(k=>{if(S(e[k]))data[k]=e[k]});
   if(!data.lot&&e.uni)data.lot=e.uni;
-  if(x)Object.assign(x,data);else{x={id:uid(),cod:'',vinc:'',cargo:'',lot:'',email:'',cel:'',ent:o?o.ent:'',...data};D.fcs.push(x)}
+  if(x){
+    // servidor já está no controle: não sobrescreve nome, órgão nem valor ajustados lá
+    const lvlMudou=lvlOf(x.fc)!==lvl,valorDado=e.valor!=null&&e.valor!=='';
+    if(lvlMudou){x.fc=data.fc;if(!valorDado)x.valor=valor}
+    if(valorDado)x.valor=valor;
+    ['cargo','lot','email','cel','vinc'].forEach(k=>{if(!S(x[k])&&S(data[k]))x[k]=data[k]});
+    if(!S(x.origem))x.origem=data.origem;
+    if(lvlMudou||valorDado)x.upd=data.upd;
+  }else{x={id:uid(),cod:'',vinc:'',cargo:'',lot:'',email:'',cel:'',ent:o?o.ent:'',...data};D.fcs.push(x)}
   e.fcId=x.id;
   const ct=syncFcContato(x);
   return (novo?' · incluído no controle de FCs ('+fmtBRL(valor)+')':' · controle de FCs atualizado')+(ct==='novo'?' e nos contatos do órgão':'');
