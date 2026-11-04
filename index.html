@@ -1038,6 +1038,8 @@ const SUPA_KEY='sb_publishable_5kJA97mc8eDIbLdiEMiu0A_yoLrxx1_';
 const AUTH_DOMAIN='scpma.local';
 const authEmail=u=>`${String(u).trim().toLowerCase()}@${AUTH_DOMAIN}`;
 let SB=null,ROLE='visitante',ME=null,SNAP=new Map(),LOADED=false,LOAD_ERR='',SYNCING=0;
+// VER: versão (atualizado_em) de cada registro como estava quando foi lido do banco
+let VER=new Map(),RL_PEND=false,SQ=Promise.resolve();
 const ROLE_LBL={admin:'Administrador',usuario:'Usuário',visitante:'Visitante'};
 const canEdit=()=>ROLE==='admin';
 const fullAccess=()=>ROLE!=='visitante';
@@ -1101,7 +1103,8 @@ async function resolveRole(session){
 async function fetchAll(){
   let rows;
   if(fullAccess()){
-    const r=await SB.from('sipofe_docs').select('colecao,id,ordem,dados').range(0,9999);if(r.error)throw r.error;rows=r.data;
+    const r=await SB.from('sipofe_docs').select('colecao,id,ordem,dados,atualizado_em').range(0,9999);if(r.error)throw r.error;rows=r.data;
+    VER=new Map(rows.map(x=>[x.colecao+':'+x.id,x.atualizado_em]));RL_PEND=false;
     const lg=await SB.from('sipofe_log').select('quando,quem,o_que').order('quando',{ascending:false}).limit(8);
     D.log=(lg.data||[]).map(l=>({when:l.quando,what:l.o_que,who:l.quem}));
   }else{
@@ -1126,7 +1129,7 @@ function watchChanges(){
   if(CH){try{SB.removeChannel(CH)}catch(e){}CH=null}
   if(!fullAccess()||!SB.channel)return;
   CH=SB.channel('sipofe-docs').on('postgres_changes',{event:'*',schema:'public',table:'sipofe_docs'},()=>{
-    if(SYNCING)return;clearTimeout(rlT);rlT=setTimeout(async()=>{if($('#drawer').classList.contains('on'))return;try{await fetchAll();render()}catch(e){}},700)}).subscribe();
+    if(SYNCING)return;clearTimeout(rlT);rlT=setTimeout(async()=>{if($('#drawer').classList.contains('on')||$('#conduct.on')){RL_PEND=true;return}try{await fetchAll();render()}catch(e){}},700)}).subscribe();
 }
 async function doLogin(user,pass){
   const {error}=await SB.auth.signInWithPassword({email:authEmail(user),password:pass});
@@ -1149,15 +1152,25 @@ function derive(){
 }
 function findReg(e){const rs=D.roteiro.registros;if(e.regId){const r=rs.find(x=>x.id===e.regId);if(r)return r}return rs.find(x=>samePerson(x.nome,e.nome))||null}
 function findFc(e){if(e.fcId){const f=D.fcs.find(x=>x.id===e.fcId);if(f)return f}return e.nome?D.fcs.find(x=>samePerson(x.nome,e.nome))||null:null}
-async function sync(){
+// uma gravação por vez, na ordem em que foram pedidas
+function sync(){const run=SQ.then(syncNow);SQ=run.catch(()=>{});return run}
+async function syncNow(){
   const cur=docsOf();const up=[],del=[];
   cur.forEach((d,k)=>{const o=SNAP.get(k);if(!o||o._s!==d._s)up.push({colecao:d.colecao,id:d.id,ordem:d.ordem,dados:d.dados})});
   SNAP.forEach((d,k)=>{if(!cur.has(k))del.push(d)});
   if(!up.length&&!del.length)return 0;
   SYNCING++;
   try{
-    for(let i=0;i<up.length;i+=200){const r=await SB.from('sipofe_docs').upsert(up.slice(i,i+200),{onConflict:'colecao,id'});if(r.error)throw r.error}
-    for(const c of uniq(del.map(d=>d.colecao))){const ids=del.filter(d=>d.colecao===c).map(d=>d.id);const r=await SB.from('sipofe_docs').delete().eq('colecao',c).in('id',ids);if(r.error)throw r.error}
+    // antes de gravar, confere se outra pessoa alterou os mesmos registros depois que eles foram carregados
+    const by={};up.filter(d=>SNAP.has(d.colecao+':'+d.id)).concat(del).forEach(d=>{(by[d.colecao]=by[d.colecao]||[]).push(d.id)});
+    for(const c in by){
+      const r=await SB.from('sipofe_docs').select('colecao,id,atualizado_em,atualizado_por').eq('colecao',c).in('id',by[c]);if(r.error)throw r.error;
+      const srv=new Map((r.data||[]).map(x=>[x.colecao+':'+x.id,x]));
+      for(const id of by[c]){const k=c+':'+id,x=srv.get(k);
+        if(!x||S(x.atualizado_em)!==S(VER.get(k))){const err=new Error('conflito');err.conflito=x&&x.atualizado_por&&(!ME||x.atualizado_por!==ME.user)?x.atualizado_por:'outra pessoa';throw err}}
+    }
+    for(let i=0;i<up.length;i+=200){const r=await SB.from('sipofe_docs').upsert(up.slice(i,i+200),{onConflict:'colecao,id'}).select('colecao,id,atualizado_em');if(r.error)throw r.error;(r.data||[]).forEach(x=>VER.set(x.colecao+':'+x.id,x.atualizado_em))}
+    for(const c of uniq(del.map(d=>d.colecao))){const ids=del.filter(d=>d.colecao===c).map(d=>d.id);const r=await SB.from('sipofe_docs').delete().eq('colecao',c).in('id',ids);if(r.error)throw r.error;ids.forEach(id=>VER.delete(c+':'+id))}
     SNAP=cur;return up.length+del.length;
   }finally{setTimeout(()=>SYNCING--,1500)}
 }
@@ -1169,7 +1182,11 @@ function persist(what){
   sync().then(async n=>{
     if(what&&n)await SB.from('sipofe_log').insert({quem:ME?ME.user:'',o_que:what});
     setSave('ok');
-  }).catch(async e=>{console.error(e);setSave('err');toast('Não foi possível salvar no banco: '+(e.message||e));try{await fetchAll();render()}catch(_){}});
+    if(RL_PEND&&!$('#drawer').classList.contains('on')&&!$('#conduct.on')){RL_PEND=false;try{await fetchAll();render()}catch(_){}}
+  }).catch(async e=>{console.error(e);setSave('err');
+    if(e.conflito)toast(`Não salvei: ${e.conflito} alterou este registro há pouco. A tela foi atualizada com a versão mais recente — confira e refaça sua alteração.`,9000);
+    else toast('Não foi possível salvar no banco: '+(e.message||e),6000);
+    try{await fetchAll();render()}catch(_){}});
 }
 const VALID_COL=new Set(['orgao','eixo','fc','entrevista','etapa','registro','visita','config']);
 async function importDocs(file){
@@ -1251,7 +1268,7 @@ const V={
  fcs:{t:'Controle de FCs e GRGs',n:'Controle FCs/GRGs',ic:'award',g:'Gratificações',ct:()=>D.fcs.length,d:()=>'Servidores com gratificação da Rede SIPOFE – Planejamento, por órgão, nível e valor.'},
  entrevistas:{t:'Entrevistas FCs e GRGs',n:'Entrevistas',ic:'chat',g:'Gratificações',ct:()=>D.entrevistas.length,d:()=>'Acompanhamento dos processos de concessão de gratificação.'},
  roteiro:{t:'Roteiro de entrevista',n:'Roteiro',ic:'list',g:'Gratificações',ct:()=>D.roteiro.registros.length,d:()=>'Etapas conduzidas pela banca e registros de cada candidato.'},
- agenda:{t:'Agenda de visitas 2025',n:'Visitas 2025',ic:'cal',g:'Agenda',ct:()=>D.agenda.length,d:()=>'Visitas institucionais da SCPMA aos órgãos.'}
+ agenda:{t:'Agenda de visitas',n:'Visitas',ic:'cal',g:'Agenda',ct:()=>D.agenda.length,d:()=>'Visitas institucionais da SCPMA aos órgãos.'}
 };
 function renderNav(){
   $('#nav').innerHTML=GROUPS.map(G=>(G.g?`<div class="grp">${G.g}</div>`:'')+G.items.map(id=>{const v=V[id];return `<button data-go="${id}" class="${st.view===id?'on':''} ${allowed(id)?'':'lock'}">${ic(v.ic)}<span>${v.n||v.t}</span>${!allowed(id)?`<span class="ct" title="Entre para acessar">${ic('lock')}</span>`:v.ct&&LOADED?`<span class="ct">${v.ct()}</span>`:''}</button>`}).join('')).join('');
@@ -1269,7 +1286,7 @@ function go(view,opts){
   if(opts&&st.f[view])Object.assign(st.f[view],opts);
   render();window.scrollTo({top:0});
   $('#side').classList.remove('on');$('#ov').classList.remove('on');
-  try{history.replaceState(null,'','#'+view)}catch(e){}
+  try{if((location.hash||'').slice(1)!==view)history.pushState(null,'','#'+view)}catch(e){}
 }
 function render(){
   IDX=[];
@@ -1902,6 +1919,7 @@ function openForm(cfg){
   openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">${esc(cfg.eyebrow||'')}</div><h3>${esc(cfg.title)}</h3></div><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
   <div class="dr-b"><form id="frm" class="frm" onsubmit="return false">${cfg.fields.map(f=>f.section?`<div class="fsec">${esc(f.section)}</div>`:f.type==='note'?`<div class="fnote">${ic('list')}<span>${esc(f.text)}</span></div>`:fieldHTML(f,cfg.values[f.k])).join('')}</form></div>
   <div class="dr-f">${cfg.onDelete?`<button class="btn danger" data-fdel>${ic('trash')}Excluir</button>`:''}${last}<span class="spacer"></span><button class="btn" data-close>Cancelar</button>${cfg.alt?`<button class="btn" data-fsave>${ic('check')}Salvar</button><button class="btn pri" data-fsave="alt">${ic(cfg.alt.icon||'arrow')}${esc(cfg.alt.label)}</button>`:`<button class="btn pri" data-fsave>${ic('check')}Salvar</button>`}</div>`);
+  try{FORM._ini=JSON.stringify(readForm())}catch(_){FORM._ini=null}
   setTimeout(()=>{const i=document.querySelector('#frm input,#frm textarea');i&&i.focus()},60);
 }
 function readForm(){
@@ -2119,6 +2137,14 @@ function buildIndex(){
 }
 let IDX=[],gSel=0,gList=[];
 function openSearch(){IDX=buildIndex();$('#modal').classList.add('on');$('#ov').classList.add('on');const i=$('#gq');i.value='';runSearch('');setTimeout(()=>i.focus(),30)}
+function formDirty(){if(!FORM||FORM._ini==null||!$('#drawer').classList.contains('on')||!$('#frm'))return false;try{return JSON.stringify(readForm())!==FORM._ini}catch(_){return false}}
+// fechar pelo Esc, pelo Cancelar ou clicando fora: pergunta antes de descartar o que foi digitado
+function tryClose(){
+  if(formDirty()&&!confirm('Você fez alterações neste formulário que ainda não foram salvas.\n\nDeseja descartá-las?'))return false;
+  closeAll();
+  if(RL_PEND&&!SYNCING&&fullAccess()){RL_PEND=false;fetchAll().then(render).catch(()=>{})}
+  return true;
+}
 function closeAll(){$('#modal').classList.remove('on');$('#drawer').classList.remove('on');$('#ov').classList.remove('on');$('#side').classList.remove('on')}
 function runSearch(q){
   const box=$('#gres');
@@ -2134,7 +2160,7 @@ function pickHit(h){closeAll();if(h.ent!=null){go('entrevistas',{q:'',status:'',
 
 /* ================= gaveta / aviso ================= */
 function openDrawer(html){const d=$('#drawer');d.innerHTML=html;d.classList.add('on');$('#ov').classList.add('on');d.setAttribute('aria-hidden','false')}
-let tT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),2200)}
+let tT;function toast(m,ms){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tT);tT=setTimeout(()=>t.classList.remove('on'),ms||2200)}
 
 /* ================= planilha (SheetJS sob demanda) ================= */
 let XL=null;
@@ -2243,7 +2269,9 @@ function filtrosDesc(v){
   if(v==='agenda'){if(f.st)o.push('Situação: '+f.st)}
   return o;
 }
-const pessoaCols=[{h:'Nome',f:p=>p.nome+(p.focal?' ★':''),w:'22%'},{h:'Nível',f:p=>fcShort(p.fc)},{h:'Cargo / função',f:p=>p.cargo||p.funcao},{h:'Lotação',k:'lot'},{h:'E-mail',k:'email'},{h:'Telefone',f:p=>(phoneInfo(p.cel)||{}).pretty||''}];
+// Nível e telefone só aparecem para quem entrou (o banco não envia esses dados ao visitante)
+const pessoaCols=()=>[{h:'Nome',f:p=>p.nome+(p.focal?' ★':''),w:'22%'},{h:'Nível',f:p=>fcShort(p.fc),priv:1},{h:'Cargo / função',f:p=>p.cargo||p.funcao},{h:'Lotação',k:'lot'},{h:'E-mail',k:'email'},{h:'Telefone',f:p=>(phoneInfo(p.cel)||{}).pretty||'',priv:1}].filter(c=>fullAccess()||!c.priv);
+const repsH=()=>fullAccess()?'Representantes (nome · e-mail · telefone)':'Representantes (nome · e-mail)';
 function regBlock(r){return D.roteiro.perguntas.map((q,k)=>`<div class="stp"><span class="k">${k+1}</span><div><b>${esc(q.t)}</b><div class="a">${r.resp[k]?escBR(r.resp[k]):'<i>Sem registro nesta etapa.</i>'}</div></div></div>`).join('')}
 function visitaBlock(a){
   return `<div class="kv"><div><span>Data</span>${a.iso?isoBR(a.iso):esc(a.dataRaw)} ${esc(a.hor||'')}</div><div><span>Processo SEI</span>${esc(a.sei)||'—'}</div><div><span>Situação da agenda</span>${stTxt(a.stA)}</div><div><span>Situação da visita</span>${stTxt(a.stV)}</div></div>
@@ -2282,7 +2310,7 @@ const REPORT={
     const orgs=contatosOrgs();const ps=orgs.flatMap(o=>o.ps);
     return {title:'Contatos SIPOFE',sub:'Pessoas de contato e pontos focais por órgão e entidade',filters:filtrosDesc('contatos'),landscape:1,
       stats:[['Órgãos',fmtN(orgs.length)],['Pessoas',fmtN(ps.length)],['Pontos focais',fmtN(ps.filter(p=>p.focal).length)],['Com FC/GRG',fmtN(ps.filter(p=>p.lvl).length)]],
-      sections:orgs.map(o=>({title:`${o.sigla} — ${o.ent}`,note:[o.tipo,o.sei?'SEI '+o.sei.replace(/\n/g,' / '):''].filter(Boolean).join(' · '),html:T(pessoaCols,o.ps)})).concat([{html:'<p style="font-size:7.5pt;color:#7A8B9C">★ = ponto focal do órgão</p>'}]),file:'Contatos SIPOFE'};
+      sections:orgs.map(o=>({title:`${o.sigla} — ${o.ent}`,note:[o.tipo,o.sei?'SEI '+o.sei.replace(/\n/g,' / '):''].filter(Boolean).join(' · '),html:T(pessoaCols(),o.ps)})).concat([{html:'<p style="font-size:7.5pt;color:#7A8B9C">★ = ponto focal do órgão</p>'}]),file:'Contatos SIPOFE'};
   },
   orgao(id){
     const o=findOrg(id);const eo=norm(o.ent0||o.ent);
@@ -2291,22 +2319,22 @@ const REPORT={
     const ent=D.entrevistas.filter(e=>norm(e.org).split(/\s*\/\s*/)[0]===norm(o.sigla));
     const mons=monForSigla(o.sigla);
     return {title:`Ficha do órgão · ${o.sigla}`,sub:o.ent,landscape:1,
-      stats:[['Contatos',o.pessoas.length],['Pontos focais',o.pessoas.filter(p=>p.focal).length],['Gratificados',fcs.length],['Entrevistas',ent.length]],
+      stats:[['Contatos',o.pessoas.length],['Pontos focais',o.pessoas.filter(p=>p.focal).length]].concat(fullAccess()?[['Gratificados',fcs.length],['Entrevistas',ent.length]]:[]),
       sections:[
         {title:'Dados do órgão',html:`<div class="kv"><div><span>Tipo de entidade</span>${esc(o.tipo)||'—'}</div><div><span>Unidade SEI</span>${escBR(o.sei)||'—'}</div></div>`},
-        {title:'Contatos',html:T(pessoaCols,o.pessoas)},
+        {title:'Contatos',html:T(pessoaCols(),o.pessoas)},
         {title:'Monitoria GECEG (SCPMA)',html:T([{h:'Eixo',k:'rn'},{h:'Responsável',k:'resp'},{h:'Substituto',k:'sub'}],mons)},
-        {title:'Representantes GECEG',html:T([{h:'Eixo',f:x=>x.e.rn},{h:'Órgão / entrega',f:x=>x.g.org},{h:'Representantes (nome · e-mail · telefone)',f:x=>x.g.reps.map(r=>[r.nome+(r.papel?' ('+r.papel+')':''),r.email,r.tel].filter(Boolean).join(' · ')).concat(x.g.mails).join('\n')}],gec)},
-        {title:'Servidores gratificados',html:T([{h:'Servidor',k:'nome'},{h:'Lotação',k:'lot'},{h:'Nível',f:x=>fcShort(x.fc)},{h:'Valor',f:x=>fmtBRL(x.valor),num:1}],fcs)},
-        {title:'Entrevistas',html:T([{h:'Servidor',k:'nome'},{h:'Grau',k:'grau'},{h:'Envio',f:e=>isoBR(e.env)},{h:'Entrevista',f:e=>isoBR(e.ent)},{h:'Resultado',f:e=>stTxt(e.status),raw:1}],ent)}
-      ],file:'Ficha '+o.sigla};
+        {title:'Representantes GECEG',html:T([{h:'Eixo',f:x=>x.e.rn},{h:'Órgão / entrega',f:x=>x.g.org},{h:repsH(),f:x=>x.g.reps.map(r=>[r.nome+(r.papel?' ('+r.papel+')':''),r.email,r.tel].filter(Boolean).join(' · ')).concat(x.g.mails).join('\n')}],gec)},
+        fullAccess()&&{title:'Servidores gratificados',html:T([{h:'Servidor',k:'nome'},{h:'Lotação',k:'lot'},{h:'Nível',f:x=>fcShort(x.fc)},{h:'Valor',f:x=>fmtBRL(x.valor),num:1}],fcs)},
+        fullAccess()&&{title:'Entrevistas',html:T([{h:'Servidor',k:'nome'},{h:'Grau',k:'grau'},{h:'Envio',f:e=>isoBR(e.env)},{h:'Entrevista',f:e=>isoBR(e.ent)},{h:'Resultado',f:e=>stTxt(e.status),raw:1}],ent)}
+      ].filter(Boolean),file:'Ficha '+o.sigla};
   },
   geceg(){
     const eixos=gecegFiltered();const n=eixos.reduce((a,e)=>a+e.orgaos.length,0);
     return {title:'Pontos focais GECEG',sub:D.gecegTitulo||'Distribuição de eixos, órgãos e responsáveis',filters:filtrosDesc('geceg'),landscape:1,
       stats:[['Eixos',eixos.length],['Órgãos / entregas',n],['Monitores SCPMA',MON_NAMES.length]],
       sections:eixos.map(e=>{const m=monOf(e)||{};return {title:`Eixo ${e.rn} — ${e.nome}`,html:`<div class="kv"><div><span>Coordenação do eixo</span>${escBR(e.coord)||'—'}</div><div><span>Monitoria SCPMA</span>${esc(m.resp||'—')} (responsável) · ${esc(m.sub||'—')} (substituto)</div></div>${m.orgs&&m.orgs.length?`<div class="txt" style="margin-bottom:6px"><b>Órgãos monitorados:</b> ${esc(m.orgs.join(', '))}</div>`:''}`+
-        T([{h:'Código',k:'cod'},{h:'Órgão',k:'org',w:'28%'},{h:'Gestor da pasta',k:'gestor'},{h:'Representantes (nome · e-mail · telefone)',f:o=>o.reps.map(r=>[r.nome+(r.papel?' ('+r.papel+')':''),r.email,r.tel].filter(Boolean).join(' · ')).concat(o.mails).join('\n'),w:'42%'}],e.orgaos)}}),file:'Pontos focais GECEG'};
+        T([{h:'Código',k:'cod'},{h:'Órgão',k:'org',w:'28%'},{h:'Gestor da pasta',k:'gestor'},{h:repsH(),f:o=>o.reps.map(r=>[r.nome+(r.papel?' ('+r.papel+')':''),r.email,r.tel].filter(Boolean).join(' · ')).concat(o.mails).join('\n'),w:'42%'}],e.orgaos)}}),file:'Pontos focais GECEG'};
   },
   fcs(){
     const rows=fcsRows();const tot=rows.reduce((a,x)=>a+x.valor,0);
@@ -2345,7 +2373,7 @@ const REPORT={
   },
   agenda(){
     const rows=agRows();
-    return {title:'Agenda de visitas 2025',sub:'Visitas institucionais da SCPMA aos órgãos',filters:filtrosDesc('agenda'),
+    return {title:'Agenda de visitas',sub:'Visitas institucionais da SCPMA aos órgãos',filters:filtrosDesc('agenda'),
       stats:[['Visitas',rows.length],['Realizadas',rows.filter(a=>/realizada$/.test(norm(a.stV))).length],['Aguardando',rows.filter(a=>/aguardando/.test(norm(a.stV))).length],['Canceladas',rows.filter(a=>/cancel/.test(norm(a.stV+' '+a.stA))).length]],
       sections:[{title:'Resumo',html:T([{h:'Data',f:a=>a.iso?isoBR(a.iso):a.dataRaw},{h:'Horário',k:'hor'},{h:'Órgão',k:'org',w:'34%'},{h:'Agenda',f:a=>stTxt(a.stA),raw:1},{h:'Visita',f:a=>stTxt(a.stV),raw:1},{h:'Processo SEI',k:'sei'}],rows)}]
         .concat(rows.map(a=>({title:a.org,note:a.iso?isoBR(a.iso):'',html:visitaBlock(a)}))),file:'Agenda de visitas'};
@@ -2361,7 +2389,7 @@ function exportMenu(v,extra=''){
 
 async function exportView(v){
   let rows=[],name=v;
-  if(v==='contatos'){rows=contatosOrgs().flatMap(o=>o.ps.map(p=>({'Tipo de entidade':o.tipo,'Sigla':o.sigla,'Entidade':o.ent,'Unidade SEI':o.sei,'Nome':p.nome,'Ponto focal':p.focal?'SIM':'','Nível':p.fc,'Cargo':p.cargo,'Função':p.funcao,'Lotação':p.lot,'E-mail':p.email,'Celular':p.cel})));name='Contatos SIPOFE'}
+  if(v==='contatos'){rows=contatosOrgs().flatMap(o=>o.ps.map(p=>({'Tipo de entidade':o.tipo,'Sigla':o.sigla,'Entidade':o.ent,'Unidade SEI':o.sei,'Nome':p.nome,'Ponto focal':p.focal?'SIM':'','Nível':p.fc,'Cargo':p.cargo,'Função':p.funcao,'Lotação':p.lot,'E-mail':p.email,'Celular':p.cel})));if(!fullAccess())rows.forEach(r=>{delete r['Nível'];delete r['Celular']});name='Contatos SIPOFE'}
   if(v==='fcs'){rows=fcsRows().map(x=>({'Cód. vínculo':x.cod,'Servidor':x.nome,'Órgão':x.org,'Entidade':x.ent,'Vínculo':x.vinc,'Cargo':x.cargo,'Lotação':x.lot,'Nível':x.fc,'Valor':x.valor,'E-mail':x.email,'Celular':x.cel}));name='FCs e GRGs'}
   if(v==='entrevistas'){rows=entRows().map(e=>({'Órgão':e.org,'Unidade':e.uni,'Processo SEI':e.sei,'Data envio':isoBR(e.env),'Data entrevista':isoBR(e.ent),'Grau':e.grau,'Servidor':e.nome,'Escolaridade':e.esc,'Experiência':e.exp,'Habilitação':e.hab,'Aprovação':e.apr,'Resultado':e.status,'Registro no roteiro':e.reg?`Sim (${e.reg.filled}/${D.roteiro.perguntas.length})`:'Não','No controle de FCs':e.fcRef?'Sim':e.status==='Deferido'?'Não (pendente)':'','Observações':e.obs}));name='Entrevistas FCs e GRGs'}
   let sheets=null;
@@ -2378,7 +2406,7 @@ async function exportView(v){
       ['Eixos GECEG',D.geceg.map(e=>({'Eixo':e.rn,'Nome':e.nome,'Coordenação':e.coord,'Monitor responsável':(monOf(e)||{}).resp||'','Substituto':(monOf(e)||{}).sub||'','Órgãos':e.orgaos.length}))],
       ['Entrevistas',D.entrevistas.map(e=>({'Servidor':e.nome,'Órgão':e.org,'Grau':e.grau,'Envio':isoBR(e.env),'Entrevista':isoBR(e.ent),'Resultado':e.status}))],
       ['Agenda',D.agenda.map(agX)]];name='Panorama Rede SIPOFE'}
-  if(v==='geceg'){gecegFiltered().forEach(e=>e.orgaos.forEach(o=>rows.push({'Eixo':e.eixo,'Coordenador':e.coord,'Monitor responsável':(monOf(e)||{}).resp||'','Monitor substituto':(monOf(e)||{}).sub||'','Código':o.cod,'Órgão':o.org,'Gestor':o.gestor,'Titular':o.reps.filter(r=>/^tit/i.test(r.papel)).map(r=>r.nome).join('\n'),'E-mail do titular':o.reps.filter(r=>/^tit/i.test(r.papel)).map(r=>r.email).join('\n'),'Telefone do titular':o.reps.filter(r=>/^tit/i.test(r.papel)).map(r=>r.tel).join('\n'),'Suplente(s)':o.reps.filter(r=>!/^tit/i.test(r.papel)).map(r=>r.nome).join('\n'),'E-mail do suplente':o.reps.filter(r=>!/^tit/i.test(r.papel)).map(r=>r.email).join('\n'),'Telefone do suplente':o.reps.filter(r=>!/^tit/i.test(r.papel)).map(r=>r.tel).join('\n'),'Outros e-mails':o.mails.join('\n')})));name='Pontos focais GECEG'}
+  if(v==='geceg'){gecegFiltered().forEach(e=>e.orgaos.forEach(o=>rows.push({'Eixo':e.eixo,'Coordenador':e.coord,'Monitor responsável':(monOf(e)||{}).resp||'','Monitor substituto':(monOf(e)||{}).sub||'','Código':o.cod,'Órgão':o.org,'Gestor':o.gestor,'Titular':o.reps.filter(r=>/^tit/i.test(r.papel)).map(r=>r.nome).join('\n'),'E-mail do titular':o.reps.filter(r=>/^tit/i.test(r.papel)).map(r=>r.email).join('\n'),'Telefone do titular':o.reps.filter(r=>/^tit/i.test(r.papel)).map(r=>r.tel).join('\n'),'Suplente(s)':o.reps.filter(r=>!/^tit/i.test(r.papel)).map(r=>r.nome).join('\n'),'E-mail do suplente':o.reps.filter(r=>!/^tit/i.test(r.papel)).map(r=>r.email).join('\n'),'Telefone do suplente':o.reps.filter(r=>!/^tit/i.test(r.papel)).map(r=>r.tel).join('\n'),'Outros e-mails':o.mails.join('\n')})));if(!fullAccess())rows.forEach(r=>{delete r['Telefone do titular'];delete r['Telefone do suplente']});name='Pontos focais GECEG'}
   if(!sheets)sheets=[[name,rows]];
   try{const X=await loadXLSX();const wb=X.utils.book_new();sheets.forEach(([n,r])=>{const ws=X.utils.json_to_sheet(r.length?r:[{'':'Nenhum registro'}]);const keys=Object.keys(r[0]||{});ws['!cols']=keys.map(k=>({wch:Math.min(60,Math.max(k.length,...r.map(x=>String(x[k]==null?'':x[k]).split('\n')[0].length))+2)}));X.utils.book_append_sheet(wb,ws,n.slice(0,31))});X.writeFile(wb,name+'.xlsx');toast(sheets.length>1?`${sheets.length} abas exportadas`:rows.length+' linhas exportadas')}catch(err){toast(err.message)}
 }
@@ -2403,7 +2431,7 @@ document.addEventListener('click',e=>{
   if(!t) return;
   if(t.dataset.copy!=null){e.preventDefault();e.stopPropagation();const v=t.dataset.copy;(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>toast('Copiado: '+v)).catch(()=>{const ta=document.createElement('textarea');ta.value=v;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Copiado: '+v)}catch(_){}ta.remove()});return}
   if(t.dataset.gi!=null){pickHit(gList[+t.dataset.gi]);return}
-  if(t.dataset.close!=null){closeAll();return}
+  if(t.dataset.close!=null){tryClose();return}
   if(t.dataset.ent!=null){e.preventDefault();openEnt(+t.dataset.ent);return}
   if(t.dataset.go){let o=null;try{o=t.dataset.opts?JSON.parse(t.dataset.opts):null}catch(_){}
     if(o){const base={contatos:{q:'',org:'',tipo:'',focal:'',fc:''},geceg:{q:'',eixo:'',fac:''},fcs:{q:'',org:'',vinc:'',lvl:''},entrevistas:{q:'',status:'',ano:'',org:'',pend:''},agenda:{q:'',st:''}}[t.dataset.go]||{};o=Object.assign({},base,o)}
@@ -2413,8 +2441,8 @@ document.addEventListener('click',e=>{
   if(t.dataset.export){exportView(t.dataset.export);return}
   if(t.dataset.sort){const [v,k]=t.dataset.sort.split(':');const f=st.f[v];if(f.sort===k)f.dir*=-1;else{f.sort=k;f.dir=1}render();return}
   if(t.dataset.tab){st.f.roteiro.tab=t.dataset.tab;render();return}
-  if(t.dataset.rsel!=null){st.f.roteiro.sel=+t.dataset.rsel;render();if(innerWidth<900){const d=document.querySelector('.md-body');d&&d.scrollIntoView({behavior:'smooth'})}return}
-  if(t.dataset.csel!=null){st.f.contatos.sel=+t.dataset.csel;render();if(innerWidth<900){const d=document.querySelector('.md-body');d&&d.scrollIntoView({behavior:'smooth'})}return}
+  if(t.dataset.rsel!=null){st.f.roteiro.sel=+t.dataset.rsel;render();if(innerWidth<900){const d=document.querySelector('.odet');d&&d.scrollIntoView({behavior:'smooth',block:'start'})}return}
+  if(t.dataset.csel!=null){st.f.contatos.sel=+t.dataset.csel;render();if(innerWidth<900){const d=document.querySelector('.odet');d&&d.scrollIntoView({behavior:'smooth',block:'start'})}return}
   if(t.dataset.vis!=null){const o=st.f.agenda.open;o[t.dataset.vis]=!o[t.dataset.vis];render();return}
   if(t.dataset.setf){const [v,k]=t.dataset.setf.split('.');st.f[v][k]=t.dataset.val;render();return}
 });
@@ -2450,12 +2478,12 @@ $('#gq').addEventListener('keydown',e=>{
 });
 document.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();openSearch()}
-  if(e.key==='Escape')closeAll();
+  if(e.key==='Escape')tryClose();
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&FORM&&$('#drawer').classList.contains('on')&&document.getElementById('frm')){e.preventDefault();saveForm()}
   if(e.key==='/'&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)){e.preventDefault();openSearch()}
 });
 $('#btnSearch').onclick=openSearch;
-$('#ov').onclick=closeAll;
+$('#ov').onclick=tryClose;
 $('#btnMenu').onclick=()=>{$('#side').classList.add('on');$('#ov').classList.add('on')};
 $('#btnAuth').onclick=()=>{if(ROLE==='visitante')go('entrar');else doLogout()};
 document.addEventListener('click',e=>{
@@ -2479,7 +2507,8 @@ $('#btnTheme').onclick=()=>{const r=document.documentElement;const dark=r.datase
 /* ================= início ================= */
 const h0=(location.hash||'').slice(1);if(V[h0])st.view=h0;
 loadInitial();
-window.addEventListener('hashchange',()=>{const v=(location.hash||'').slice(1);if(v!==st.view&&V[v]){closeAll();go(v)}});
+window.addEventListener('hashchange',()=>{const v=(location.hash||'').slice(1)||'home';if(v===st.view||!V[v])return;
+  if(!tryClose()){try{history.pushState(null,'','#'+st.view)}catch(_){}return}go(v)});
 window.addEventListener('pageshow',()=>{});
 window.__HUB={D:()=>D,EDIT,report:(k,a)=>reportDoc(REPORT[k](a)),exportView,role:()=>ROLE,sync:()=>sync(),reload:()=>loadInitial(),snap:()=>SNAP,docs:()=>[...docsOf().values()].map(d=>({colecao:d.colecao,id:d.id,ordem:d.ordem,dados:d.dados}))};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.xp.on').forEach(x=>x.classList.remove('on'))});
