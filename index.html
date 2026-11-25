@@ -1577,7 +1577,8 @@ R.home=()=>{
   const SG=[[],[],[],[],[],[]];
   andam.forEach(e=>{const cs=chkState(e);if(!cs.done&&!chkLegacy(e))SG[(cs.n||docsDe(e).length)?1:0].push(e);else if(!(e.reg&&e.reg.filled))SG[2].push(e);else SG[3].push(e)});
   const lim=new Date(Date.now()-90*864e5).toISOString().slice(0,10);
-  D.entrevistas.filter(e=>['Deferido','Indeferido'].includes(e.status)&&!(e.desp&&e.desp.salvoEm)&&S(e.dt)>=lim).forEach(e=>SG[4].push(e));
+  // despacho: decididos sem despacho salvo, com data ou última edição nos últimos 90 dias
+  D.entrevistas.filter(e=>['Deferido','Indeferido'].includes(e.status)&&!(e.desp&&e.desp.salvoEm)&&(S(e.dt)>=lim||S(e.upd).slice(0,10)>=lim)).forEach(e=>SG[4].push(e));
   defSemFc.forEach(e=>SG[5].push(e));
   // fila de trabalho: o que pede ação, com o caminho direto
   const T=[];
@@ -1610,7 +1611,7 @@ R.home=()=>{
   if(st.home.org==null){const pref=orgOpts.find(o=>o.sigla==='SEDUC')||orgOpts.find(o=>o.pessoas.some(p=>p.focal))||orgOpts[0];st.home.org=pref?pref.id:0}
   const lv=[1,2,3,4,5].map(n=>D.fcs.filter(f=>f.lvl===n).length);const maxl=Math.max(1,...lv);
   const STG=[['Recebido','sem documentos conferidos'],['Checklist',''],['Entrevista','aguardando entrevista'],['Resultado',''],['Despacho',''],['Controle FCs','fora do controle']];
-  const sub=(k,e)=>k===1?`${chkState(e).n} de ${chkState(e).N} itens`:k===3?`roteiro ${e.reg.filled}/${PQ(e.reg).length}`:k===4?`${e.status.toLowerCase()}${e.dt?' em '+isoBR(e.dt).slice(0,5):''}`:STG[k][1];
+  const sub=(k,e)=>k===1?`${chkState(e).n} de ${chkState(e).N} itens`:k===3?`roteiro ${e.reg.filled}/${PQ(e.reg).length}`:k===4?`${e.status.toLowerCase()} · sem despacho`:k===2&&/^sim/.test(norm(e.hab))?`documentos habilitados${/ressalva/.test(norm(e.hab))?' com ressalva':''}`:STG[k][1];
   const logBox=(D.log&&D.log.length)?`<section class="panel"><div class="panel-h"><span class="hic c-blue">${ic('clock')}</span><div><h3>Últimas alterações</h3><div class="note">O que foi editado neste hub</div></div></div><div class="logl">${D.log.slice(0,6).map(l=>`<div><span class="mono">${new Date(l.when).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span><b>${esc(l.what)}</b>${l.who?`<em>${esc(l.who)}</em>`:''}</div>`).join('')}</div></section>`:'';
   const eixosBox=`<section class="panel"><div class="panel-h"><span class="hic c-green">${ic('target')}</span><div><h3>Eixos GECEG</h3><div class="note">Clique para ver órgãos e representantes</div></div></div>
       <div class="eixos-grid">${D.geceg.map(e=>`<button class="ex" data-go="geceg" data-opts='${esc(JSON.stringify({eixo:e.eixo,q:'',fac:''}))}'><span class="er">${esc(e.rn)}</span><span class="en">${esc(e.nome)}</span><span class="ef">${(m=>m?`Resp. ${esc(m.resp)} · Subst. ${esc(m.sub)}`:esc(e.fac.join(', ')))(monOf(e))}</span></button>`).join('')}</div></section>`;
@@ -1850,7 +1851,8 @@ function diffForm(F,v){const out=[];F.fields.forEach(f=>{if(f.section||f.type===
 /* ---- Checklist antes da entrevista ---- */
 function chkState(e){const it=chkItens(),m=(e.chk&&e.chk.ok)||{};const n=it.filter(x=>m[x.id]).length;return {it,m,n,N:it.length,done:it.length>0&&n===it.length}}
 // entrevistas antigas (já conduzidas ou concluídas antes do checklist existir) não ficam pendentes
-function chkLegacy(e){const m=e.chk&&e.chk.ok;return !(m&&Object.keys(m).length)&&(!!(e.reg&&e.reg.filled)||['Deferido','Indeferido','Cancelado'].includes(e.status))}
+// também vale quando a habilitação de documentos já foi registrada (Sim / Sim. Com ressalva): os documentos já foram conferidos
+function chkLegacy(e){const m=e.chk&&e.chk.ok;return !(m&&Object.keys(m).length)&&(!!(e.reg&&e.reg.filled)||['Deferido','Indeferido','Cancelado'].includes(e.status)||/^sim/.test(norm(e.hab)))}
 function chkHTML(e,inConduct){
   const s=chkState(e),ro=!canEdit();
   return `<div class="chk ${s.done?'done':''}" data-chkbox="${e.id}"><div class="chk-h"><b>${s.done?ic('check')+'Tudo conferido':'Confira antes de conduzir a entrevista'}</b><span>${s.n} de ${s.N} itens</span>${canEdit()&&!inConduct?`<button class="btn ghost sm" data-edit="chkitens:${e.id}" title="Editar os itens do checklist (vale para todas as entrevistas)">${ic('edit')}Itens</button>`:''}</div>
