@@ -820,6 +820,130 @@ th{background:var(--surface-3)}
 .rbar-in .spacer{flex:0 1 0}
 @media (max-width:1600px){th,td{padding:.5rem .5rem}th{letter-spacing:.03em}table{font-size:.75rem}.tbl td.w{min-width:9.5rem}.content{padding:1.25rem 1.25rem 3rem}.top{padding:0 1.25rem}}
 @media (max-width:1600px) and (min-width:901px){.app{grid-template-columns:13.75rem minmax(0,1fr)}}
+
+/* =========================================================
+   NOVA INTERFACE — camadas: fundo · vidro (estrutura) · sólido (leitura)
+   ========================================================= */
+:root{--bg:#EDF1F6;--muted:#5B6670;--radius:1.25rem;
+  --glass:rgba(255,255,255,.64);--glass-2:rgba(255,255,255,.8);--glass-bd:rgba(255,255,255,.8);
+  --glass-sh:0 1px 2px rgba(16,32,60,.05),0 10px 30px rgba(16,32,60,.06);--blur:blur(18px) saturate(140%)}
+:root[data-theme="dark"]{--bg:#0E1217;--glass:rgba(24,30,38,.7);--glass-2:rgba(28,35,44,.86);--glass-bd:rgba(255,255,255,.07);
+  --glass-sh:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.22)}
+body{background:var(--bg)}
+body::before,body::after{content:"";position:fixed;z-index:0;border-radius:50%;pointer-events:none;filter:blur(90px)}
+body::before{width:38rem;height:38rem;left:-10rem;top:-14rem;background:rgba(11,61,122,.16)}
+body::after{width:32rem;height:32rem;right:-9rem;bottom:-10rem;background:rgba(31,157,76,.12)}
+:root[data-theme="dark"] body::before{background:rgba(90,167,238,.09)}:root[data-theme="dark"] body::after{background:rgba(61,190,92,.07)}
+.app{position:relative;z-index:1;grid-template-columns:16.5rem minmax(0,1fr)}
+/* navegação: cartão azul flutuante */
+.side{top:1rem;height:calc(100vh - 2rem);margin:1rem 0 1rem 1rem;border-radius:1.5rem;overflow:hidden;background:rgba(11,43,85,.92);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid rgba(255,255,255,.12);box-shadow:0 12px 32px rgba(11,43,85,.18)}
+:root[data-theme="dark"] .side{background:rgba(11,32,64,.9);border:1px solid rgba(255,255,255,.08)}
+.govbar{display:none}
+.brand{border-bottom:0;padding:1.25rem 1.125rem .75rem}
+.brand .mark{width:2.5rem;height:2.5rem;border-radius:.75rem}
+.brand b{font-size:.9375rem}
+.nav{padding:.5rem .75rem}
+.nav .grp{padding:1.125rem .75rem .375rem}
+.nav button{min-height:2.75rem;padding:0 .75rem;border-radius:.75rem;font-size:.8438rem;color:#DCE6F3}
+.nav button:hover{background:rgba(255,255,255,.08)}
+.nav button.on{background:rgba(255,255,255,.15);color:#fff}
+:root[data-theme="dark"] .nav button.on{background:rgba(255,255,255,.15);color:#fff}:root[data-theme="dark"] .nav button.on svg.i{color:var(--accent)}
+.nav button.on .ct{color:#fff}
+/* na tela inicial a busca grande substitui a da barra superior */
+.is-home .top .searchbtn{visibility:hidden}
+.nav button.on::before{display:none}
+.nav button.on svg.i{color:var(--accent);opacity:1}
+.nav .ct{color:#9FB5D3}
+.side-foot{margin:.5rem .75rem .75rem;border:0;border-radius:1rem;background:rgba(255,255,255,.07);padding:.75rem}
+.sbtn{border-radius:.625rem;min-height:2.25rem}
+/* barra superior e busca */
+.top{background:color-mix(in srgb,var(--bg) 72%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:0;height:4.5rem;padding:0 2rem}
+.searchbtn{height:2.875rem;width:min(32rem,46vw);padding:0 .875rem;border-radius:1rem;background:var(--glass-2);border:1px solid var(--glass-bd);box-shadow:var(--glass-sh);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);font-size:.8438rem;color:var(--muted)}
+.searchbtn kbd{border-radius:.5rem;background:rgba(18,32,25,.06);border:0;padding:.125rem .5rem}
+.content{padding:1.25rem 2rem 3.5rem}
+/* cabeçalho das áreas */
+.ph{margin-bottom:1.25rem}
+.ph .eyebrow{color:var(--brand-ink);font-size:.75rem;letter-spacing:.02em;text-transform:none;font-weight:600}
+.ph .eyebrow::before{display:none}
+.ph h1{font-size:1.875rem;letter-spacing:-.025em}
+.ph p{font-size:.875rem}
+/* blocos de vidro; conteúdo de leitura em sólido */
+.panel,.stats,.mod{background:var(--glass);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-bd);box-shadow:var(--glass-sh)}
+.panel,.stats{border-radius:var(--radius)}
+.panel-h{padding:1rem 1.25rem;border-bottom-color:rgba(18,32,25,.07)}
+.panel-h h3{font-size:.9375rem}
+.filterbar{background:transparent;border-bottom-color:rgba(18,32,25,.07);padding:.75rem 1rem}
+.tbl{background:var(--surface);border-radius:0 0 var(--radius) var(--radius)}
+.stat{border-right-color:rgba(18,32,25,.07)}
+.mod{border-radius:1.125rem}.mod::before{display:none}
+.mod:hover{border-color:var(--glass-bd);box-shadow:0 14px 34px rgba(16,32,60,.1)}
+.btn{border-radius:.75rem;padding:.5rem .875rem;min-height:2.375rem}
+.btn.sm{min-height:2rem;border-radius:.625rem;padding:.3125rem .6875rem}
+.btn.icon{min-height:0;padding:.4375rem}
+.xp-m{border-radius:1rem}
+.modal{border-radius:1.25rem;background:var(--glass-2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-bd)}
+.ov{background:rgba(10,20,35,.28);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.drawer{top:.75rem;bottom:.75rem;right:.75rem;width:min(37.5rem,calc(100vw - 1.5rem));border-radius:1.5rem;overflow:hidden;transform:translateX(calc(100% + 1rem))}
+.toast{border-radius:1rem}
+@media (max-width:1600px) and (min-width:901px){.app{grid-template-columns:15rem minmax(0,1fr)}.content{padding:1.25rem 1.5rem 3rem}.top{padding:0 1.5rem}}
+@media (max-width:900px){
+  .side{margin:0;top:0;height:100vh;border-radius:0 1.5rem 1.5rem 0}
+  .top{padding:0 1rem;height:4rem}.content{padding:1rem 1rem 2.5rem}
+  .drawer{top:0;bottom:0;right:0;width:100vw;border-radius:0}
+}
+
+/* ---------- tela inicial ---------- */
+.hm-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:1rem 1.5rem;margin:.25rem 0 1.25rem}
+.hm-date{font-size:.8125rem;font-weight:600;color:var(--brand-ink)}
+.hm-head h1{margin:.25rem 0;font-size:2.125rem;line-height:1.15;font-weight:700;letter-spacing:-.025em}
+.hm-head p{margin:0;font-size:1rem;color:var(--ink-2)}.hm-head p b{color:var(--ink)}
+.hm-act{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.hm-act .btn{min-height:2.75rem;padding:0 1.125rem;font-size:.8438rem}
+.hm-search{max-width:none;margin-bottom:1.25rem;background:var(--glass-2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--glass-bd);box-shadow:var(--glass-sh);border-radius:1.125rem;z-index:25}
+.hm-search input{color:var(--ink)}
+.hm-search kbd{background:rgba(18,32,25,.06);border:0;border-radius:.5rem}
+:root[data-theme="dark"] .hm-search>svg.i{color:var(--navy)}
+.hm-row{display:grid;grid-template-columns:minmax(0,2fr) minmax(18rem,1fr);gap:1.25rem;margin-bottom:1.25rem;align-items:stretch}
+.hm-box{padding:1.25rem;display:flex;flex-direction:column;gap:.75rem}
+.hm-box>header{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem .75rem}
+.hm-box h2{margin:0;font-size:1.1875rem;font-weight:700;letter-spacing:-.01em}
+.hm-box header .note{font-size:.8125rem;color:var(--muted)}
+.hm-box header .spacer{flex:1}
+.hm-badge{font-size:.75rem;font-weight:700;padding:.1875rem .625rem;border-radius:999px;background:var(--navy);color:#fff}
+:root[data-theme="dark"] .hm-badge{color:#0E1217}
+.tk{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1rem;padding:.875rem 1rem;border-radius:1rem;background:var(--surface);border:1px solid rgba(18,32,25,.06)}
+.tk-c{flex:none;min-width:7.5rem;text-align:center;font-size:.75rem;font-weight:700;padding:.3125rem .625rem;border-radius:999px}
+.tk-t{flex:1 1 15rem;min-width:0;display:flex;flex-direction:column;gap:.125rem}
+.tk-t b{font-size:.9375rem;font-weight:600}.tk-t span{font-size:.8125rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tk .btn{min-height:2.5rem;color:var(--navy)}
+.t-chk{background:#FFF1BF;color:#5C4600}.t-ent{background:#E3ECF8;color:#0B3D7A}.t-res{background:#DDF2E3;color:#115E2E}.t-fc{background:#FCE5D4;color:#7A330A}.t-rede{background:#E7EBEF;color:#33403A}
+.tk-ok{display:flex;align-items:center;gap:.75rem;padding:1.25rem;border-radius:1rem;background:var(--brand-soft);color:var(--brand-ink);font-weight:600}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.625rem}
+.kpi{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:.125rem;padding:.75rem .875rem;border-radius:.875rem;background:var(--surface);border:1px solid rgba(18,32,25,.06)}
+.kpi:hover{border-color:color-mix(in srgb,var(--navy) 35%,transparent)}
+.kpi span{font-size:.75rem;color:var(--muted)}.kpi b{font-size:1.375rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.kpi em{font-style:normal;font-size:.75rem;color:var(--muted)}
+.kpi.hl b{color:var(--navy)}
+.pipe6{display:grid;grid-template-columns:repeat(6,minmax(9.5rem,1fr));gap:.625rem;overflow-x:auto;padding-bottom:.25rem}
+.stg{display:flex;flex-direction:column;gap:.5rem;padding:.75rem;border-radius:1rem;background:color-mix(in srgb,var(--surface) 55%,transparent);border:1px solid rgba(18,32,25,.06);min-width:0}
+.stg-h{display:flex;align-items:center;gap:.5rem}
+.stg-h i{font-style:normal;width:1.5rem;height:1.5rem;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:700;background:#E3ECF8;color:#0B3D7A;flex:none}
+.stg.cur .stg-h i{background:var(--accent);color:#2B2100}
+.stg-h b{flex:1;font-size:.8125rem;font-weight:600}.stg-h span{font-size:.8125rem;font-weight:700;color:var(--ink-2)}
+.pc{all:unset;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:.125rem;padding:.625rem .75rem;border-radius:.75rem;background:var(--surface);border:1px solid rgba(18,32,25,.07)}
+.pc:hover{border-color:color-mix(in srgb,var(--navy) 40%,transparent)}
+.pc b{font-size:.8125rem;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.pc span{font-size:.75rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc em{font-style:normal;font-size:.75rem;font-weight:600;color:var(--ink-2)}.pc em.late{color:#9A3412}
+.stg-more{all:unset;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--info);padding:.25rem .25rem 0}
+.stg-empty{padding:.75rem;border-radius:.75rem;border:1px dashed color-mix(in srgb,var(--muted) 45%,transparent);font-size:.75rem;color:var(--muted);text-align:center}
+.hm-sec{margin-bottom:1.25rem}
+.duo.one{grid-template-columns:minmax(0,1fr)}
+@media (max-width:1150px){.hm-row{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:900px){.hm-head h1{font-size:1.625rem}.hm-search kbd{display:none}.tk-c{min-width:0}}
+:root[data-theme="dark"] .t-chk{background:rgba(253,219,0,.14);color:#F2D33B}:root[data-theme="dark"] .t-ent{background:rgba(90,167,238,.14);color:#8CC4F5}
+:root[data-theme="dark"] .t-res{background:rgba(61,190,92,.14);color:#71D58D}:root[data-theme="dark"] .t-fc{background:rgba(255,140,80,.14);color:#FFB089}
+:root[data-theme="dark"] .t-rede{background:rgba(255,255,255,.08);color:#C9D2DC}:root[data-theme="dark"] .stg-h i{background:rgba(90,167,238,.16);color:#8CC4F5}
+:root[data-theme="dark"] .pc em.late{color:#FFB089}
 </style>
 </head>
 <body>
@@ -1374,6 +1498,7 @@ function render(){
   const v=V[st.view]||V.home;
   $('#crumb').innerHTML=st.view==='home'?`<b>Visão geral</b>`:`<span class="g">${v.g}</span>${ic('chev')}<b>${v.t}</b>`;
   document.title='Conecta SIPOFE';
+  document.documentElement.classList.toggle('is-home',st.view==='home');
   renderNav();
   if(!LOADED){$('#view').innerHTML=`<div class="loading"><span class="spin"></span>Carregando dados da rede…</div>`;return}
   if(LOAD_ERR&&st.view!=='entrar'){$('#view').innerHTML=`<section class="panel lockp"><span class="lk bad">${ic('x')}</span><h2>Não foi possível carregar os dados</h2><p>${esc(LOAD_ERR)}</p><button class="btn pri" id="btnRetry">${ic('refresh')}Tentar de novo</button></section>`;return}
@@ -1441,81 +1566,92 @@ R.home=()=>{
   const rs=D.redeStats||{};
   const full=fullAccess();
   const semFocal=D.contatos.filter(o=>!o.pessoas.some(p=>p.focal)).length;
-  const hoje=hojeISO();
-  const vis=D.agenda.filter(a=>a.iso&&!/cancel/.test(norm(a.stV+' '+a.stA)));
-  const prox=vis.filter(a=>a.iso>=hoje).sort((a,b)=>a.iso.localeCompare(b.iso))[0];
   const semReg=D.entrevistas.filter(e=>!e.reg&&e.nome!=='(não informado)'&&e.status!=='Cancelado').length;
-  const defSemFc=D.entrevistas.filter(e=>e.status==='Deferido'&&!e.fcRef).length;
-  const chips=[
-    {l:'Pontos focais',n:focais,go:'contatos',opts:{focal:'1',mode:'orgao'}},
-    {l:'Órgãos sem ponto focal',n:semFocal,go:'contatos',opts:{focal:'sem',mode:'orgao'},warn:1},
-    full&&{l:'Processos em andamento',n:andam.length,go:'entrevistas',opts:{status:'Em andamento'}},
-    full&&{l:'Deferidos fora do controle de FCs',n:defSemFc,go:'entrevistas',opts:{pend:'fc'},warn:1},
-    full&&{l:'Entrevistas sem registro no roteiro',n:semReg,go:'entrevistas',opts:{pend:'reg'},warn:1},
-    prox?{l:`Próxima visita: ${prox.org.split(/ [–-] /)[0]} · ${isoBR(prox.iso).slice(0,5)}`,go:'agenda',opts:{q:'',st:'',open:{[prox.id]:true}}}:{l:'Agenda de visitas',n:D.agenda.length,go:'agenda',opts:{q:'',st:''}},
-    {l:'Monitores GECEG',n:MON_NAMES.length,go:'geceg',opts:{q:'',eixo:'',fac:''}}
-  ].filter(Boolean);
+  const defSemFc=D.entrevistas.filter(e=>e.status==='Deferido'&&!e.fcRef);
+  const ix=e=>D.entrevistas.indexOf(e);
+  const nomes=l=>l.slice(0,3).map(e=>e.nome).join(', ')+(l.length>3?` e mais ${l.length-3}`:'');
+  // etapa de cada processo em andamento (mesma lógica da ficha da entrevista)
+  const SG=[[],[],[],[],[],[]];
+  andam.forEach(e=>{const cs=chkState(e);if(!cs.done&&!chkLegacy(e))SG[(cs.n||docsDe(e).length)?1:0].push(e);else if(!(e.reg&&e.reg.filled))SG[2].push(e);else SG[3].push(e)});
+  const lim=new Date(Date.now()-90*864e5).toISOString().slice(0,10);
+  D.entrevistas.filter(e=>['Deferido','Indeferido'].includes(e.status)&&!(e.desp&&e.desp.salvoEm)&&S(e.dt)>=lim).forEach(e=>SG[4].push(e));
+  defSemFc.forEach(e=>SG[5].push(e));
+  // fila de trabalho: o que pede ação, com o caminho direto
+  const T=[];
+  const tk=(cls,cat,l,one,many,meta,go)=>{if(!l.length)return;T.push({cls,cat,t:l.length===1?one(l[0]):many(l.length),meta:meta(l),attr:l.length===1?`data-ent="${ix(l[0])}"`:go,btn:l.length===1?'Abrir':'Ver todos'})};
+  if(full){
+    tk('t-chk','Checklist',SG[0].concat(SG[1]),e=>`Conferir o checklist de ${e.nome}`,n=>`${n} processos com checklist pendente`,l=>l.length===1?`${l[0].org} · ${l[0].grau||'grau não informado'} · ${chkState(l[0]).n} de ${chkState(l[0]).N} itens`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
+    tk('t-ent','Entrevista',SG[2],e=>`Conduzir a entrevista de ${e.nome}`,n=>`${n} entrevistas a conduzir`,l=>l.length===1?`${l[0].org} · ${l[0].grau||'grau não informado'}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
+    tk('t-res','Resultado',SG[3],e=>`Registrar o resultado de ${e.nome}`,n=>`${n} entrevistas aguardando resultado`,l=>l.length===1?`${l[0].org} · roteiro ${l[0].reg.filled}/${PQ(l[0].reg).length}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
+    tk('t-res','Despacho',SG[4],e=>`Gerar o despacho de ${e.nome}`,n=>`${n} despachos de devolutiva a gerar`,l=>l.length===1?`${l[0].org} · ${l[0].status.toLowerCase()}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:''}))}'`);
+    tk('t-fc','Controle FCs',defSemFc,e=>`Incluir ${e.nome} no controle de FCs`,n=>`${n} deferidos fora do controle de FCs`,l=>l.length===1?`${l[0].org} · ${l[0].grau||''}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({pend:'fc'}))}'`);
+    if(semReg)T.push({cls:'t-ent',cat:'Roteiro',t:plural(semReg,'entrevista sem registro no roteiro','entrevistas sem registro no roteiro'),meta:'Registros antigos ou entrevistas ainda não conduzidas',attr:`data-go="entrevistas" data-opts='${esc(JSON.stringify({pend:'reg'}))}'`,btn:'Ver lista'});
+  }
+  if(semFocal)T.push({cls:'t-rede',cat:'Rede',t:plural(semFocal,'órgão ainda sem ponto focal','órgãos ainda sem ponto focal'),meta:D.contatos.filter(o=>!o.pessoas.some(p=>p.focal)).slice(0,6).map(o=>o.sigla).join(', ')+(semFocal>6?'…':''),attr:`data-go="contatos" data-opts='${esc(JSON.stringify({focal:'sem',mode:'orgao'}))}'`,btn:'Ver órgãos'});
+  const nt=T.length;
+  const hoje=new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+  const kp=[{l:'Órgãos integrantes',v:rs.integrantes!=null?fmtN(rs.integrantes):fmtN(D.contatos.length),s:`${D.contatos.length} órgãos cadastrados`,go:'contatos',o:{}},
+    {l:'Contatos',v:fmtN(pessoas.length),s:'pessoas na rede',go:'contatos',o:{mode:'lista'}},
+    {l:'Pontos focais',v:fmtN(focais),s:`${semFocal} órgãos sem`,go:'contatos',o:{focal:'1',mode:'orgao'}},
+    {l:'Eixos GECEG',v:fmtN(D.geceg.length),s:`${MON_NAMES.length} monitores`,go:'geceg',o:{}}]
+    .concat(full?[{l:'Gratificados',v:fmtN(D.fcs.length),s:'FCRG e GRG',go:'fcs',o:{}},{l:'Valor mensal',v:fmtBRL(val),s:`${fmtN(D.entrevistas.length)} entrevistas registradas`,go:'fcs',o:{},hl:1}]:[]);
   const mods=[
     {id:'contatos',c:'blue',d:'Quem é quem em cada órgão: contatos e pontos focais de planejamento.',n:`${pessoas.length} pessoas · ${D.contatos.length} órgãos`},
     {id:'geceg',c:'green',d:'Representantes por eixo e monitores SCPMA responsáveis e substitutos.',n:`${D.geceg.length} eixos`},
     {id:'fcs',c:'yellow',d:'Servidores gratificados, níveis FCRG/GRG e valores mensais.',n:`${D.fcs.length} servidores · ${fmtBRL(val)}/mês`},
-    {id:'entrevistas',c:'blue',d:'Processos de concessão: envio, entrevista, habilitação e resultado.',n:`${andam.length} em andamento`},
+    {id:'entrevistas',c:'blue',d:'Processos de concessão: documentos, checklist, entrevista e resultado.',n:`${andam.length} em andamento`},
     {id:'roteiro',c:'green',d:'Etapas que a banca segue e o registro de cada candidato.',n:`${rotAtivo().perguntas.length} etapas · ${D.roteiro.registros.length} registros`},
     {id:'agenda',c:'yellow',d:'Visitas institucionais da SCPMA: pauta, participantes e encaminhamentos.',n:`${D.agenda.length} visitas`}
   ];
   const orgOpts=D.contatos.slice().sort((a,b)=>a.sigla.localeCompare(b.sigla,'pt'));
   if(st.home.org==null){const pref=orgOpts.find(o=>o.sigla==='SEDUC')||orgOpts.find(o=>o.pessoas.some(p=>p.focal))||orgOpts[0];st.home.org=pref?pref.id:0}
-  const steps=e=>{const s=[{l:'Envio',ok:/^\d{4}/.test(e.env)},{l:'Entrevista',ok:/^\d{4}/.test(e.ent)},{l:'Habilitação',ok:/^sim/.test(norm(e.hab))},{l:'Aprovação',ok:/^sim/.test(norm(e.apr))},{l:'Resultado',ok:e.status!=='Em andamento'}];const cur=s.findIndex(x=>!x.ok);return {s,cur}};
-  const pend=andam.slice().sort((a,b)=>S(b.env||b.ent).localeCompare(S(a.env||a.ent)));
   const lv=[1,2,3,4,5].map(n=>D.fcs.filter(f=>f.lvl===n).length);const maxl=Math.max(1,...lv);
-  return `
-  <section class="hero2">
-    <svg class="hero-net" viewBox="0 0 400 300" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width="1.2"><path d="M60 220 140 150 230 190 300 90 370 140M140 150 170 60 300 90M230 190 260 270M170 60 90 40"/></g><g fill="#fff"><circle cx="60" cy="220" r="5"/><circle cx="140" cy="150" r="8"/><circle cx="230" cy="190" r="6"/><circle cx="300" cy="90" r="9"/><circle cx="370" cy="140" r="5"/><circle cx="170" cy="60" r="6"/><circle cx="260" cy="270" r="4"/><circle cx="90" cy="40" r="4"/></g><circle cx="300" cy="90" r="9" fill="#FDDB00"/><circle cx="140" cy="150" r="8" fill="#2DA44A"/></svg>
-    <div class="hero-in">
-      <div class="hello">${saud}${ME&&ROLE!=='visitante'?', '+esc(S(ME.nome).split(' ')[0]):''} · Conecta SIPOFE</div>
-      <h1>Encontre pessoas, órgãos e processos da rede em segundos.</h1>
-      <div class="hsearch">
-        ${ic('search')}
-        <input id="hq" placeholder="Digite um nome, órgão, sigla, e-mail ou nº de processo SEI" autocomplete="off" aria-label="Buscar no hub">
-        <kbd>Ctrl K</kbd>
-        <div class="hres" id="hres"></div>
-      </div>
-      <div class="hchips"><span>Atalhos:</span>${chips.map(c=>`<button class="hchip ${c.warn&&c.n?'warn':''}" data-go="${c.go}" data-opts='${esc(JSON.stringify(c.opts||{}))}'>${esc(c.l)}${c.n!=null?`<b>${fmtN(c.n)}</b>`:''}</button>`).join('')}</div>
-    </div>
-    <div class="hnums">
-      ${[[rs.integrantes,'órgãos integrantes'],[pessoas.length,'contatos'],[focais,'pontos focais'],[D.geceg.length,'eixos GECEG']].concat(full?[[D.fcs.length,'gratificados'],[D.entrevistas.length,'entrevistas']]:[]).filter(x=>x[0]!=null).map(([n,l])=>`<div><b>${fmtN(n)}</b><span>${l}</span></div>`).join('')}
-    </div>
-  </section>
-
-  ${!D.contatos.length?`<section class="panel emptydb"><span class="lk">${ic('dl')}</span><div><h3>O banco do Conecta ainda está vazio</h3><p>${canEdit()?'Importe o arquivo de dados iniciais (<b>conecta-sipofe-dados-iniciais.json</b>) para carregar contatos, GECEG, gratificações, entrevistas, roteiro e agenda.':'Um administrador precisa importar os dados iniciais.'}</p></div>${canEdit()?`<label class="btn pri">${ic('plus')}Importar dados iniciais<input type="file" accept=".json,application/json" class="impFile" hidden></label>`:''}</section>`:''}
-  <div class="sec-head"><h2>Módulos</h2><span>Escolha por onde começar</span>${exportMenu('home',canEdit()?`<hr><button role="menuitem" data-backup>${ic('shield')}<span><b>Backup completo (.json)</b><small>Cópia de segurança de todos os dados</small></span></button><label role="menuitem" class="xp-imp">${ic('refresh')}<span><b>Importar backup (.json)</b><small>Restaura ou atualiza registros</small></span><input type="file" accept=".json,application/json" class="impFile" hidden></label>`:'')}</div>
-  <div class="mods">${mods.map(m=>{const v=V[m.id];const ok=allowed(m.id);return `<button class="mod c-${m.c} ${ok?'':'locked'}" data-go="${m.id}"><span class="mi">${ic(v.ic)}</span><span class="mt">${v.t}${ok?'':`<span class="lockt">${ic('lock')}Restrito</span>`}</span><span class="mdesc">${m.d}</span><span class="mf"><span>${ok?m.n:'Entre para acessar'}</span>${ic('arrow')}</span></button>`}).join('')}</div>
-
-  <div class="duo">
-    <section class="panel ficha">
+  const STG=[['Recebido','sem documentos conferidos'],['Checklist',''],['Entrevista','aguardando entrevista'],['Resultado',''],['Despacho',''],['Controle FCs','fora do controle']];
+  const sub=(k,e)=>k===1?`${chkState(e).n} de ${chkState(e).N} itens`:k===3?`roteiro ${e.reg.filled}/${PQ(e.reg).length}`:k===4?`${e.status.toLowerCase()}${e.dt?' em '+isoBR(e.dt).slice(0,5):''}`:STG[k][1];
+  const logBox=(D.log&&D.log.length)?`<section class="panel"><div class="panel-h"><span class="hic c-blue">${ic('clock')}</span><div><h3>Últimas alterações</h3><div class="note">O que foi editado neste hub</div></div></div><div class="logl">${D.log.slice(0,6).map(l=>`<div><span class="mono">${new Date(l.when).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span><b>${esc(l.what)}</b>${l.who?`<em>${esc(l.who)}</em>`:''}</div>`).join('')}</div></section>`:'';
+  const eixosBox=`<section class="panel"><div class="panel-h"><span class="hic c-green">${ic('target')}</span><div><h3>Eixos GECEG</h3><div class="note">Clique para ver órgãos e representantes</div></div></div>
+      <div class="eixos-grid">${D.geceg.map(e=>`<button class="ex" data-go="geceg" data-opts='${esc(JSON.stringify({eixo:e.eixo,q:'',fac:''}))}'><span class="er">${esc(e.rn)}</span><span class="en">${esc(e.nome)}</span><span class="ef">${(m=>m?`Resp. ${esc(m.resp)} · Subst. ${esc(m.sub)}`:esc(e.fac.join(', ')))(monOf(e))}</span></button>`).join('')}</div></section>`;
+  const nivBox=full?`<section class="panel"><div class="panel-h"><span class="hic c-yellow">${ic('award')}</span><div><h3>Gratificações por nível</h3><div class="note">${D.fcs.length} servidores · ${fmtBRL(val)} por mês</div></div><span class="spacer"></span><button class="btn ghost sm" data-go="fcs">Controle ${ic('arrow')}</button></div>
+      <div class="cols">${lv.map((c,i)=>`<button class="colb" data-go="fcs" data-opts='${esc(JSON.stringify({lvl:String(i+1),q:'',org:'',vinc:''}))}'><span class="cv">${c}</span><span class="cbar"><i style="height:${Math.max(6,c/maxl*100)}%"></i></span><span class="cl">Nível ${i+1}</span></button>`).join('')}</div></section>`:'';
+  const ficha=`<section class="panel ficha">
       <div class="panel-h"><span class="hic c-yellow">${ic('star')}</span><div><h3>Ficha rápida do órgão</h3><div class="note">Ponto focal, representantes GECEG e gratificados num só lugar</div></div></div>
       <div class="panel-b" style="padding-bottom:6px"><select id="fichaSel" aria-label="Escolher órgão" style="width:100%;max-width:none">${orgOpts.map(o=>opt(o.id,`${o.sigla} — ${o.ent}`,st.home.org)).join('')}</select></div>
-      <div id="ficha">${fichaHTML(st.home.org)}</div>
+      <div id="ficha">${fichaHTML(st.home.org)}</div></section>`;
+  const blocks=[ficha,logBox||eixosBox,logBox?eixosBox:'',nivBox].filter(Boolean);
+  const duos=[];for(let i=0;i<blocks.length;i+=2)duos.push(`<div class="duo ${blocks[i+1]?'':'one'}">${blocks[i]}${blocks[i+1]||''}</div>`);
+  return `
+  <section class="hm-head">
+    <div><span class="hm-date">${esc(hoje.charAt(0).toUpperCase()+hoje.slice(1))}</span>
+      <h1>${saud}${ME&&ROLE!=='visitante'?', '+esc(S(ME.nome).split(' ')[0]):''}</h1>
+      <p>${nt?(full?`Há <b>${plural(nt,'item','itens')}</b> pedindo atenção na sua fila de trabalho.`:`Há <b>${plural(nt,'pendência','pendências')}</b> na rede.`):'Nenhuma pendência no momento.'}</p></div>
+    <div class="hm-act">${canEdit()?`<button class="btn pri" data-edit="ent:">${ic('plus')}Nova entrevista</button>`:''}${exportMenu('home',canEdit()?`<hr><button role="menuitem" data-backup>${ic('shield')}<span><b>Backup completo (.json)</b><small>Cópia de segurança de todos os dados</small></span></button><label role="menuitem" class="xp-imp">${ic('refresh')}<span><b>Importar backup (.json)</b><small>Restaura ou atualiza registros</small></span><input type="file" accept=".json,application/json" class="impFile" hidden></label>`:'')}</div>
+  </section>
+  <div class="hsearch hm-search">${ic('search')}<input id="hq" placeholder="Buscar pessoa, órgão, sigla, e-mail ou nº de processo SEI" autocomplete="off" aria-label="Buscar no hub"><kbd>Ctrl K</kbd><div class="hres" id="hres"></div></div>
+
+  ${!D.contatos.length?`<section class="panel emptydb"><span class="lk">${ic('dl')}</span><div><h3>O banco do Conecta ainda está vazio</h3><p>${canEdit()?'Importe o arquivo de dados iniciais (<b>conecta-sipofe-dados-iniciais.json</b>) para carregar contatos, GECEG, gratificações, entrevistas, roteiro e agenda.':'Um administrador precisa importar os dados iniciais.'}</p></div>${canEdit()?`<label class="btn pri">${ic('plus')}Importar dados iniciais<input type="file" accept=".json,application/json" class="impFile" hidden></label>`:''}</section>`:''}
+
+  <div class="hm-row">
+    <section class="panel hm-box" aria-labelledby="hmFila">
+      <header><h2 id="hmFila">${full?'Sua fila de trabalho':'Pendências da rede'}</h2>${nt?`<span class="hm-badge">${nt}</span>`:''}</header>
+      ${T.map(x=>`<div class="tk"><span class="tk-c ${x.cls}">${esc(x.cat)}</span><div class="tk-t"><b>${esc(x.t)}</b><span title="${esc(x.meta)}">${esc(x.meta)}</span></div><button class="btn" ${x.attr}>${esc(x.btn)}${ic('arrow')}</button></div>`).join('')||`<div class="tk-ok">${ic('check')}Tudo em dia. Nenhuma pendência na rede${full?' nem nos processos':''}.</div>`}
     </section>
-    ${full?`<section class="panel">
-      <div class="panel-h"><span class="hic c-blue">${ic('chat')}</span><div><h3>Processos em andamento</h3><div class="note">Em que etapa está cada concessão de gratificação</div></div><span class="spacer"></span><button class="btn ghost sm" data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento',q:'',ano:'',org:''}))}'>Ver todos ${ic('arrow')}</button></div>
-      <div class="pipe-legend">${['Envio','Entrevista','Habilitação','Aprovação','Resultado'].map((l,i)=>`<span>${i+1}. ${l}</span>`).join('')}</div>
-      <div class="pipes">${pend.slice(0,7).map(e=>{const {s,cur}=steps(e);return `<button class="pipe" data-ent="${D.entrevistas.indexOf(e)}"><span class="pn"><b>${esc(e.nome)}</b><span>${esc(e.org)} · ${esc(e.grau)}</span></span><span class="dots">${s.map((x,i)=>`<i class="${x.ok?'ok':i===cur?'cur':''}" title="${x.l}${x.ok?' ✓':i===cur?' — etapa atual':''}"></i>`).join('')}</span><span class="pnext">${cur>=0?s[cur].l:'Concluído'}</span></button>`}).join('')||'<div class="empty">Nenhum processo em andamento.</div>'}</div>
-    </section>`:`<section class="panel"><div class="panel-h"><span class="hic c-yellow">${ic('cal')}</span><div><h3>Agenda de visitas</h3><div class="note">Visitas institucionais da SCPMA aos órgãos</div></div><span class="spacer"></span><button class="btn ghost sm" data-go="agenda">Ver agenda ${ic('arrow')}</button></div>
-      <div class="logl">${D.agenda.slice().sort((a,b)=>S(b.iso).localeCompare(S(a.iso))).slice(0,7).map(a=>`<div><span class="mono">${a.iso?isoBR(a.iso):esc(a.dataRaw)}</span><b>${esc(a.org)}</b><span class="spacer"></span>${stat(a.stV||a.stA)}</div>`).join('')||'<div class="empty">Nenhuma visita.</div>'}</div></section>`}
+    <section class="panel hm-box" aria-labelledby="hmNum">
+      <header><h2 id="hmNum">A rede em números</h2></header>
+      <div class="kpis">${kp.map(k=>`<button class="kpi ${k.hl?'hl':''}" data-go="${k.go}" data-opts='${esc(JSON.stringify(k.o))}'><span>${esc(k.l)}</span><b>${k.v}</b><em>${esc(k.s)}</em></button>`).join('')}</div>
+    </section>
   </div>
 
-  ${(D.log&&D.log.length)?`<section class="panel mb"><div class="panel-h"><span class="hic c-blue">${ic('clock')}</span><div><h3>Últimas alterações</h3><div class="note">O que foi editado neste hub</div></div></div><div class="logl">${D.log.slice(0,6).map(l=>`<div><span class="mono">${new Date(l.when).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span><b>${esc(l.what)}</b>${l.who?`<em>${esc(l.who)}</em>`:''}</div>`).join('')}</div></section>`:''}
-  <div class="duo ${full?'':'one'}">
-    <section class="panel">
-      <div class="panel-h"><span class="hic c-green">${ic('target')}</span><div><h3>Eixos GECEG</h3><div class="note">Clique para ver órgãos e representantes</div></div></div>
-      <div class="eixos-grid">${D.geceg.map(e=>`<button class="ex" data-go="geceg" data-opts='${esc(JSON.stringify({eixo:e.eixo,q:'',fac:''}))}'><span class="er">${esc(e.rn)}</span><span class="en">${esc(e.nome)}</span><span class="ef">${(m=>m?`Resp. ${esc(m.resp)} · Subst. ${esc(m.sub)}`:esc(e.fac.join(', ')))(monOf(e))}</span></button>`).join('')}</div>
-    </section>
-    ${full?`<section class="panel">
-      <div class="panel-h"><span class="hic c-yellow">${ic('award')}</span><div><h3>Gratificações por nível</h3><div class="note">${D.fcs.length} servidores · ${fmtBRL(val)} por mês</div></div><span class="spacer"></span><button class="btn ghost sm" data-go="fcs">Controle ${ic('arrow')}</button></div>
-      <div class="cols">${lv.map((c,i)=>`<button class="colb" data-go="fcs" data-opts='${esc(JSON.stringify({lvl:String(i+1),q:'',org:'',vinc:''}))}'><span class="cv">${c}</span><span class="cbar"><i style="height:${Math.max(6,c/maxl*100)}%"></i></span><span class="cl">Nível ${i+1}</span></button>`).join('')}</div>
-    </section>`:''}
-  </div>`;
+  ${full?`<section class="panel hm-box hm-sec" aria-labelledby="hmPipe">
+    <header><h2 id="hmPipe">Processos de gratificação em andamento</h2><span class="note">Do processo recebido ao controle de FCs</span><span class="spacer"></span><button class="btn ghost sm" data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'>Ver entrevistas ${ic('arrow')}</button></header>
+    <div class="pipe6">${STG.map(([n],k)=>`<div class="stg ${SG[k].length&&k>0?'cur':''}"><div class="stg-h"><i>${k+1}</i><b>${n}</b><span>${SG[k].length}</span></div>
+      ${SG[k].slice(0,3).map(e=>`<button class="pc" data-ent="${ix(e)}"><b>${esc(e.nome)}</b><span>${esc(e.org)}${e.grau?' · '+esc(e.grau):''}</span><em class="${k>=4?'late':''}">${esc(sub(k,e))}</em></button>`).join('')||'<div class="stg-empty">Nenhum processo</div>'}
+      ${SG[k].length>3?`<button class="stg-more" data-go="entrevistas" data-opts='${esc(JSON.stringify(k===5?{pend:'fc'}:{status:k<4?'Em andamento':''}))}'>+ ${SG[k].length-3} ${SG[k].length-3===1?'outro':'outros'}</button>`:''}</div>`).join('')}</div>
+  </section>`:''}
+
+  ${duos.join('')}
+
+  <div class="sec-head"><h2>Áreas do sistema</h2><span>Acesso direto a cada módulo</span></div>
+  <div class="mods">${mods.map(m=>{const v=V[m.id];const ok=allowed(m.id);return `<button class="mod c-${m.c} ${ok?'':'locked'}" data-go="${m.id}"><span class="mi">${ic(v.ic)}</span><span class="mt">${v.t}${ok?'':`<span class="lockt">${ic('lock')}Restrito</span>`}</span><span class="mdesc">${m.d}</span><span class="mf"><span>${ok?m.n:'Entre para acessar'}</span>${ic('arrow')}</span></button>`}).join('')}</div>`;
 };
 function fichaHTML(id){
   const o=D.contatos.find(x=>x.id===+id);if(!o)return'';
