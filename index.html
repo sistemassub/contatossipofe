@@ -937,6 +937,8 @@ body::after{width:32rem;height:32rem;right:-9rem;bottom:-10rem;background:rgba(3
 .stg-more{all:unset;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--info);padding:.25rem .25rem 0}
 .stg-empty{padding:.75rem;border-radius:.75rem;border:1px dashed color-mix(in srgb,var(--muted) 45%,transparent);font-size:.75rem;color:var(--muted);text-align:center}
 .hm-sec{margin-bottom:1.25rem}
+/* telas muito largas: o conteúdo não se espalha */
+.content{max-width:100rem;margin-inline:auto;box-sizing:border-box}
 .duo.one{grid-template-columns:minmax(0,1fr)}
 @media (max-width:1150px){.hm-row{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:900px){.hm-head h1{font-size:1.625rem}.hm-search kbd{display:none}.tk-c{min-width:0}}
@@ -1617,7 +1619,8 @@ R.home=()=>{
       <div class="panel-h"><span class="hic c-yellow">${ic('star')}</span><div><h3>Ficha rápida do órgão</h3><div class="note">Ponto focal, representantes GECEG e gratificados num só lugar</div></div></div>
       <div class="panel-b" style="padding-bottom:6px"><select id="fichaSel" aria-label="Escolher órgão" style="width:100%;max-width:none">${orgOpts.map(o=>opt(o.id,`${o.sigla} — ${o.ent}`,st.home.org)).join('')}</select></div>
       <div id="ficha">${fichaHTML(st.home.org)}</div></section>`;
-  const blocks=[ficha,logBox||eixosBox,logBox?eixosBox:'',nivBox].filter(Boolean);
+  // tela inicial enxuta: fila, números, processos e últimas alterações
+  const blocks=[logBox].filter(Boolean);
   const duos=[];for(let i=0;i<blocks.length;i+=2)duos.push(`<div class="duo ${blocks[i+1]?'':'one'}">${blocks[i]}${blocks[i+1]||''}</div>`);
   return `
   <section class="hm-head">
@@ -1649,9 +1652,7 @@ R.home=()=>{
   </section>`:''}
 
   ${duos.join('')}
-
-  <div class="sec-head"><h2>Áreas do sistema</h2><span>Acesso direto a cada módulo</span></div>
-  <div class="mods">${mods.map(m=>{const v=V[m.id];const ok=allowed(m.id);return `<button class="mod c-${m.c} ${ok?'':'locked'}" data-go="${m.id}"><span class="mi">${ic(v.ic)}</span><span class="mt">${v.t}${ok?'':`<span class="lockt">${ic('lock')}Restrito</span>`}</span><span class="mdesc">${m.d}</span><span class="mf"><span>${ok?m.n:'Entre para acessar'}</span>${ic('arrow')}</span></button>`}).join('')}</div>`;
+`;
 };
 function fichaHTML(id){
   const o=D.contatos.find(x=>x.id===+id);if(!o)return'';
