@@ -730,6 +730,13 @@ html:not(.can-edit) [data-edit],html:not(.can-edit) .ebtn{display:none!important
 .es.ok span{background:var(--brand);color:#fff}.es.ok b{color:var(--ink)}
 .es.now{background:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:inset 0 0 0 1.5px var(--accent)}.es.now span{background:var(--accent);color:#122019}.es.now b{color:var(--ink)}
 .es.skip{opacity:.45}
+button.es{font:inherit;border:0;text-align:left;cursor:pointer;color:var(--muted)}
+button.es:hover{background:var(--surface-3)}
+.es.sel{box-shadow:inset 0 0 0 2px var(--navy)!important;opacity:1}
+.es-next.now{padding:.625rem .875rem;border-radius:.75rem;background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
+.etab{padding-bottom:.25rem}
+.regin{margin:.5rem 1.25rem 0;max-height:none}
+.enav{display:flex;justify-content:space-between;gap:.5rem;padding:1rem 1.25rem 1.25rem;margin-top:.75rem;border-top:1px solid var(--line-2)}
 .es-next{margin:.5rem 1.25rem 0;font-size:.78rem;color:var(--ink-2)}.es-next.ok{color:var(--brand-ink)}
 .es-next{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;justify-content:space-between}
 .regdet{margin:.5rem 1.25rem 0}.regdet>summary{cursor:pointer;font-size:.78rem;font-weight:600;color:var(--info);padding:.25rem 0}
@@ -815,7 +822,9 @@ th{background:var(--surface-3)}
 .dupw>div{flex:1;min-width:0}.dupw>div>b{display:block;font-size:.8125rem}.dupw>div>span{font-size:.75rem;color:var(--ink-2)}
 .dupw ul{margin:.5rem 0 0;padding:0;list-style:none}
 .dupw li{font-size:.75rem;padding:.35rem 0;border-top:1px solid color-mix(in srgb,#F5C518 35%,var(--line))}
-.lnkb{all:unset;cursor:pointer;color:var(--info);font-weight:600;margin-left:.25rem}.lnkb:hover{text-decoration:underline}
+.lnkb{all:unset;cursor:pointer;color:var(--info);font-weight:600;margin-left:.5rem}
+.alt-t{display:inline-flex;margin-top:.25rem;cursor:pointer;border-color:color-mix(in srgb,#F5C518 70%,var(--line));background:#FFF6D6;color:#5C4600;font:inherit;font-size:.6562rem;font-weight:700}
+:root[data-theme="dark"] .alt-t{background:rgba(253,219,0,.14);color:#F2D33B}.lnkb:hover{text-decoration:underline}
 .dupw-a{margin-top:.625rem}
 .rbar{margin-bottom:1rem}
 .rbar-in{display:flex;align-items:center;gap:.75rem;padding:.75rem 1rem;flex-wrap:wrap}
@@ -931,7 +940,7 @@ body::after{width:32rem;height:32rem;right:-9rem;bottom:-10rem;background:rgba(3
 .kpi:hover{border-color:color-mix(in srgb,var(--navy) 35%,transparent)}
 .kpi span{font-size:.75rem;color:var(--muted)}.kpi b{font-size:1.375rem;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}.kpi em{font-style:normal;font-size:.75rem;color:var(--muted)}
 .kpi.hl b{color:var(--navy)}
-.pipe6{display:grid;grid-template-columns:repeat(6,minmax(9.5rem,1fr));gap:.625rem;overflow-x:auto;padding-bottom:.25rem}
+.pipe6{display:grid;grid-template-columns:repeat(5,minmax(10rem,1fr));gap:.625rem;overflow-x:auto;padding-bottom:.25rem}
 .stg{display:flex;flex-direction:column;gap:.5rem;padding:.75rem;border-radius:1rem;background:color-mix(in srgb,var(--surface) 55%,transparent);border:1px solid rgba(18,32,25,.06);min-width:0}
 .stg-h{display:flex;align-items:center;gap:.5rem}
 .stg-h i{font-style:normal;width:1.5rem;height:1.5rem;border-radius:50%;display:grid;place-items:center;font-size:.75rem;font-weight:700;background:#E3ECF8;color:#0B3D7A;flex:none}
@@ -1492,6 +1501,8 @@ function renderNav(){
   $('#btnTheme').innerHTML=ic(dark?'sun':'moon');
 }
 function go(view,opts){
+  // sair para outra área fecha a ficha/gaveta aberta (antes ela ficava presa na tela)
+  if($('#drawer').classList.contains('on')||$('#modal').classList.contains('on'))closeAll();
   // ao entrar em Entrevistas, sempre da mais recente para a mais antiga
   if(view==='entrevistas'&&st.view!=='entrevistas'){st.f.entrevistas.sort='dt';st.f.entrevistas.dir=-1}
   st.view=view;
@@ -1578,20 +1589,20 @@ R.home=()=>{
   const ix=e=>D.entrevistas.indexOf(e);
   const nomes=l=>l.slice(0,3).map(e=>e.nome).join(', ')+(l.length>3?` e mais ${l.length-3}`:'');
   // etapa de cada processo em andamento (mesma lógica da ficha da entrevista)
-  const SG=[[],[],[],[],[],[]];
-  andam.forEach(e=>{const cs=chkState(e);if(!cs.done&&!chkLegacy(e))SG[(cs.n||docsDe(e).length)?1:0].push(e);else if(!(e.reg&&e.reg.filled))SG[2].push(e);else SG[3].push(e)});
+  const SG=[[],[],[],[],[]];
+  andam.forEach(e=>{if(!chkState(e).done)SG[0].push(e);else if(!(e.reg&&e.reg.filled))SG[1].push(e);else SG[2].push(e)});
   const lim=new Date(Date.now()-90*864e5).toISOString().slice(0,10);
   // despacho: decididos sem despacho salvo, com data ou última edição nos últimos 90 dias
-  D.entrevistas.filter(e=>['Deferido','Indeferido'].includes(e.status)&&!(e.desp&&e.desp.salvoEm)&&(S(e.dt)>=lim||S(e.upd).slice(0,10)>=lim)).forEach(e=>SG[4].push(e));
-  defSemFc.forEach(e=>SG[5].push(e));
+  D.entrevistas.filter(e=>['Deferido','Indeferido'].includes(e.status)&&!(e.desp&&e.desp.salvoEm)&&(S(e.dt)>=lim||S(e.upd).slice(0,10)>=lim)).forEach(e=>SG[3].push(e));
+  defSemFc.forEach(e=>SG[4].push(e));
   // fila de trabalho: o que pede ação, com o caminho direto
   const T=[];
   const tk=(cls,cat,l,one,many,meta,go)=>{if(!l.length)return;T.push({cls,cat,t:l.length===1?one(l[0]):many(l.length),meta:meta(l),attr:l.length===1?`data-ent="${ix(l[0])}"`:go,btn:l.length===1?'Abrir':'Ver todos'})};
   if(full){
-    tk('t-chk','Checklist',SG[0].concat(SG[1]),e=>`Conferir o checklist de ${e.nome}`,n=>`${n} processos com checklist pendente`,l=>l.length===1?`${l[0].org} · ${l[0].grau||'grau não informado'} · ${chkState(l[0]).n} de ${chkState(l[0]).N} itens`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
-    tk('t-ent','Entrevista',SG[2],e=>`Conduzir a entrevista de ${e.nome}`,n=>`${n} entrevistas a conduzir`,l=>l.length===1?`${l[0].org} · ${l[0].grau||'grau não informado'}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
-    tk('t-res','Resultado',SG[3],e=>`Registrar o resultado de ${e.nome}`,n=>`${n} entrevistas aguardando resultado`,l=>l.length===1?`${l[0].org} · roteiro ${l[0].reg.filled}/${PQ(l[0].reg).length}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
-    tk('t-res','Despacho',SG[4],e=>`Gerar o despacho de ${e.nome}`,n=>`${n} despachos de devolutiva a gerar`,l=>l.length===1?`${l[0].org} · ${l[0].status.toLowerCase()}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:''}))}'`);
+    tk('t-chk','Checklist',SG[0],e=>`Conferir o checklist de ${e.nome}`,n=>`${n} processos com checklist pendente`,l=>l.length===1?`${l[0].org} · ${l[0].grau||'grau não informado'} · ${chkState(l[0]).n} de ${chkState(l[0]).N} itens`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
+    tk('t-ent','Entrevista',SG[1],e=>`Conduzir a entrevista de ${e.nome}`,n=>`${n} entrevistas a conduzir`,l=>l.length===1?`${l[0].org} · ${l[0].grau||'grau não informado'}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
+    tk('t-res','Resultado',SG[2],e=>`Registrar o resultado de ${e.nome}`,n=>`${n} entrevistas aguardando resultado`,l=>l.length===1?`${l[0].org} · roteiro ${l[0].reg.filled}/${PQ(l[0].reg).length}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'`);
+    tk('t-res','Despacho',SG[3],e=>`Gerar o despacho de ${e.nome}`,n=>`${n} despachos de devolutiva a gerar`,l=>l.length===1?`${l[0].org} · ${l[0].status.toLowerCase()}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({status:''}))}'`);
     tk('t-fc','Controle FCs',defSemFc,e=>`Incluir ${e.nome} no controle de FCs`,n=>`${n} deferidos fora do controle de FCs`,l=>l.length===1?`${l[0].org} · ${l[0].grau||''}`:nomes(l),`data-go="entrevistas" data-opts='${esc(JSON.stringify({pend:'fc'}))}'`);
     if(semReg)T.push({cls:'t-ent',cat:'Roteiro',t:plural(semReg,'entrevista sem registro no roteiro','entrevistas sem registro no roteiro'),meta:'Registros antigos ou entrevistas ainda não conduzidas',attr:`data-go="entrevistas" data-opts='${esc(JSON.stringify({pend:'reg'}))}'`,btn:'Ver lista'});
   }
@@ -1614,8 +1625,8 @@ R.home=()=>{
   const orgOpts=D.contatos.slice().sort((a,b)=>a.sigla.localeCompare(b.sigla,'pt'));
   if(st.home.org==null){const pref=orgOpts.find(o=>o.sigla==='SEDUC')||orgOpts.find(o=>o.pessoas.some(p=>p.focal))||orgOpts[0];st.home.org=pref?pref.id:0}
   const lv=[1,2,3,4,5].map(n=>D.fcs.filter(f=>f.lvl===n).length);const maxl=Math.max(1,...lv);
-  const STG=[['Recebido','sem documentos conferidos'],['Checklist',''],['Entrevista','aguardando entrevista'],['Resultado',''],['Despacho',''],['Controle FCs','fora do controle']];
-  const sub=(k,e)=>k===1?`${chkState(e).n} de ${chkState(e).N} itens`:k===3?`roteiro ${e.reg.filled}/${PQ(e.reg).length}`:k===4?`${e.status.toLowerCase()} · sem despacho`:k===2&&/^sim/.test(norm(e.hab))?`documentos habilitados${/ressalva/.test(norm(e.hab))?' com ressalva':''}`:STG[k][1];
+  const STG=[['Checklist',''],['Entrevista','aguardando entrevista'],['Resultado',''],['Despacho',''],['Controle FCs','fora do controle']];
+  const sub=(k,e)=>k===0?`${chkState(e).n} de ${chkState(e).N} itens`:k===2?`roteiro ${e.reg.filled}/${PQ(e.reg).length}`:k===3?`${e.status.toLowerCase()} · sem despacho`:STG[k][1];
   const logBox=(D.log&&D.log.length)?`<section class="panel"><div class="panel-h"><span class="hic c-blue">${ic('clock')}</span><div><h3>Últimas alterações</h3><div class="note">O que foi editado neste hub</div></div></div><div class="logl">${D.log.slice(0,6).map(l=>`<div><span class="mono">${new Date(l.when).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}</span><b>${esc(l.what)}</b>${l.who?`<em>${esc(l.who)}</em>`:''}</div>`).join('')}</div></section>`:'';
   const eixosBox=`<section class="panel"><div class="panel-h"><span class="hic c-green">${ic('target')}</span><div><h3>Eixos GECEG</h3><div class="note">Clique para ver órgãos e representantes</div></div></div>
       <div class="eixos-grid">${D.geceg.map(e=>`<button class="ex" data-go="geceg" data-opts='${esc(JSON.stringify({eixo:e.eixo,q:'',fac:''}))}'><span class="er">${esc(e.rn)}</span><span class="en">${esc(e.nome)}</span><span class="ef">${(m=>m?`Resp. ${esc(m.resp)} · Subst. ${esc(m.sub)}`:esc(e.fac.join(', ')))(monOf(e))}</span></button>`).join('')}</div></section>`;
@@ -1652,9 +1663,9 @@ R.home=()=>{
 
   ${full?`<section class="panel hm-box hm-sec" aria-labelledby="hmPipe">
     <header><h2 id="hmPipe">Processos de gratificação em andamento</h2><span class="note">Do processo recebido ao controle de FCs</span><span class="spacer"></span><button class="btn ghost sm" data-go="entrevistas" data-opts='${esc(JSON.stringify({status:'Em andamento'}))}'>Ver entrevistas ${ic('arrow')}</button></header>
-    <div class="pipe6">${STG.map(([n],k)=>`<div class="stg ${SG[k].length&&k>0?'cur':''}"><div class="stg-h"><i>${k+1}</i><b>${n}</b><span>${SG[k].length}</span></div>
-      ${SG[k].slice(0,3).map(e=>`<button class="pc" data-ent="${ix(e)}"><b>${esc(e.nome)}</b><span>${esc(e.org)}${e.grau?' · '+esc(e.grau):''}</span><em class="${k>=4?'late':''}">${esc(sub(k,e))}</em></button>`).join('')||'<div class="stg-empty">Nenhum processo</div>'}
-      ${SG[k].length>3?`<button class="stg-more" data-go="entrevistas" data-opts='${esc(JSON.stringify(k===5?{pend:'fc'}:{status:k<4?'Em andamento':''}))}'>+ ${SG[k].length-3} ${SG[k].length-3===1?'outro':'outros'}</button>`:''}</div>`).join('')}</div>
+    <div class="pipe6">${STG.map(([n],k)=>`<div class="stg ${SG[k].length?'cur':''}"><div class="stg-h"><i>${k+1}</i><b>${n}</b><span>${SG[k].length}</span></div>
+      ${SG[k].slice(0,3).map(e=>`<button class="pc" data-ent="${ix(e)}"><b>${esc(e.nome)}</b><span>${esc(e.org)}${e.grau?' · '+esc(e.grau):''}</span><em class="${k>=3?'late':''}">${esc(sub(k,e))}</em></button>`).join('')||'<div class="stg-empty">Nenhum processo</div>'}
+      ${SG[k].length>3?`<button class="stg-more" data-go="entrevistas" data-opts='${esc(JSON.stringify(k===4?{pend:'fc'}:{status:k<3?'Em andamento':''}))}'>+ ${SG[k].length-3} ${SG[k].length-3===1?'outro':'outros'}</button>`:''}</div>`).join('')}</div>
   </section>`:''}
 
   ${duos.join('')}
@@ -1773,6 +1784,8 @@ R.geceg=()=>{
 };
 
 /* ---- FCs ---- */
+// pedido novo (alteração de grau) em andamento para quem já está no controle
+const altOf=x=>D.entrevistas.find(e=>e.status==='Em andamento'&&(e.fcId===x.id||norm(e.nome)===norm(x.nome)))||null;
 function fcsRows(){const f=st.f.fcs;return sorter(D.fcs.filter(x=>(!f.org||x.org===f.org)&&(!f.vinc||x.vinc===f.vinc)&&(!f.lvl||x.lvl===+f.lvl)&&matchQ([x.nome,x.email,x.org,x.ent,x.cargo,x.lot,x.cod].join(' '),f.q)),f.sort,f.dir)}
 R.fcs=()=>{
   const f=st.f.fcs;const rows=fcsRows();
@@ -1793,7 +1806,7 @@ R.fcs=()=>{
     <span class="count">${plural(rows.length,'servidor','servidores')}</span>
   </div>
   <div class="tbl"><table><thead><tr>${sortTh('fcs','nome','Servidor')}${sortTh('fcs','org','Órgão')}${sortTh('fcs','lot','Lotação / cargo')}${sortTh('fcs','vinc','Vínculo')}${sortTh('fcs','lvl','Nível')}${sortTh('fcs','valor','Valor','num')}<th>E-mail</th><th>Telefone</th><th></th></tr></thead>
-  <tbody>${rows.map(x=>`<tr><td class="w"><b>${esc(x.nome)}</b><span class="sub mono">Vínculo ${esc(x.cod)}</span></td><td><b title="${esc(x.ent)}">${esc(x.org)}</b></td><td>${esc(x.lot)}<span class="sub">${esc(x.cargo)}</span></td><td>${esc(x.vinc)}</td><td><span class="tag">${esc(fcShort(x.fc))}</span></td><td class="num">${fmtBRL(x.valor)}</td><td>${mailCell(x.email)}</td><td>${telCell(x.cel)}</td><td class="num">${editBtn('fc:'+x.id,'Editar servidor')}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Nenhum servidor encontrado.</td></tr>'}</tbody>
+  <tbody>${rows.map(x=>`<tr><td class="w"><b>${esc(x.nome)}</b><span class="sub mono">Vínculo ${esc(x.cod)}</span>${(a=>a?`<button class="tag alt-t" data-ent="${D.entrevistas.indexOf(a)}" title="Abrir o processo em andamento">Alteração em andamento: ${esc(fcShort(a.grau)||'grau a definir')}</button>`:'')(altOf(x))}</td><td><b title="${esc(x.ent)}">${esc(x.org)}</b></td><td>${esc(x.lot)}<span class="sub">${esc(x.cargo)}</span></td><td>${esc(x.vinc)}</td><td><span class="tag">${esc(fcShort(x.fc))}</span></td><td class="num">${fmtBRL(x.valor)}</td><td>${mailCell(x.email)}</td><td>${telCell(x.cel)}</td><td class="num">${editBtn('fc:'+x.id,'Editar servidor')}</td></tr>`).join('')||'<tr><td colspan="9" class="empty">Nenhum servidor encontrado.</td></tr>'}</tbody>
   <tfoot><tr><td colspan="5">${plural(rows.length,'servidor','servidores')}</td><td class="num">${fmtBRL(tot)}</td><td colspan="3"></td></tr></tfoot></table></div></section>`;
 };
 
@@ -1853,28 +1866,32 @@ function fmtVal(f,x){
 function diffForm(F,v){const out=[];F.fields.forEach(f=>{if(f.section||f.type==='note'||!f.k)return;const a=fmtVal(f,F.values[f.k]),b=fmtVal(f,v[f.k]);if(a!==b)out.push({c:S(f.label).replace(/^\d+\.\s*/,'').slice(0,90),de:a.slice(0,400),para:b.slice(0,400)})});return out}
 
 /* ---- Checklist antes da entrevista ---- */
-function chkState(e){const it=chkItens(),m=(e.chk&&e.chk.ok)||{};const n=it.filter(x=>m[x.id]).length;return {it,m,n,N:it.length,done:it.length>0&&n===it.length}}
+function chkState(e){const it=chkItens();
+  // processo concluído antes do checklist existir: aparece todo marcado
+  if(chkLegacy(e)){const m={};it.forEach(x=>m[x.id]=true);return {it,m,n:it.length,N:it.length,done:true,legacy:true}}
+  const m=(e.chk&&e.chk.ok)||{};const n=it.filter(x=>m[x.id]).length;return {it,m,n,N:it.length,done:it.length>0&&n===it.length}}
 // entrevistas antigas (já conduzidas ou concluídas antes do checklist existir) não ficam pendentes
 // também vale quando a habilitação de documentos já foi registrada (Sim / Sim. Com ressalva): os documentos já foram conferidos
-function chkLegacy(e){const m=e.chk&&e.chk.ok;return !(m&&Object.keys(m).length)&&(!!(e.reg&&e.reg.filled)||['Deferido','Indeferido','Cancelado'].includes(e.status)||/^sim/.test(norm(e.hab)))}
+function chkLegacy(e){const m=e.chk&&e.chk.ok;return !(m&&Object.keys(m).length)&&['Deferido','Indeferido','Cancelado'].includes(e.status)}
 function chkHTML(e,inConduct){
   const s=chkState(e),ro=!canEdit();
   return `<div class="chk ${s.done?'done':''}" data-chkbox="${e.id}"><div class="chk-h"><b>${s.done?ic('check')+'Tudo conferido':'Confira antes de conduzir a entrevista'}</b><span>${s.n} de ${s.N} itens</span>${canEdit()&&!inConduct?`<button class="btn ghost sm" data-edit="chkitens:${e.id}" title="Editar os itens do checklist (vale para todas as entrevistas)">${ic('edit')}Itens</button>`:''}</div>
   <span class="chk-bar"><i style="width:${s.N?Math.round(s.n/s.N*100):0}%"></i></span>
   ${s.it.map(x=>`<label class="chk-i"><input type="checkbox" data-chk="${e.id}:${x.id}"${s.m[x.id]?' checked':''}${ro?' disabled':''}><span>${esc(x.t)}${x.esc&&[1,2].includes(lvlOf(e.grau))?`<em class="chk-req">Obrigatório neste processo: ${esc(fcShort(e.grau))} exige nível superior</em>`:''}</span></label>`).join('')}
   <label class="chk-obs"><span>Observações</span><textarea data-chkobs="${e.id}" rows="2" placeholder="Ex.: ressalvas, documento pendente, uso de declaração excepcional"${ro?' disabled':''}>${esc((e.chk&&e.chk.obs)||'')}</textarea></label>
+  ${s.legacy?'<div class="chk-f">Processo concluído antes do checklist existir: os itens aparecem como conferidos.</div>':''}
   ${e.chk&&e.chk.em?`<div class="chk-f">Última conferência: ${esc(e.chk.por||'')} · ${fmtDT(e.chk.em)}</div>`:ro?'<div class="chk-f">Somente administradores podem marcar os itens.</div>':''}</div>`;
 }
 function refreshChk(e){
   if($('#conduct.on')){const el=document.querySelector(`#conduct [data-chkbox="${e.id}"]`);if(el)el.outerHTML=chkHTML(e,true);const b=$('#cdnchk');if(b)b.classList.toggle('ok',chkState(e).done);return}
-  if($('#drawer').classList.contains('on')&&document.querySelector(`#drawer [data-chkbox="${e.id}"]`)){const b=$('#drawer .dr-b'),sc=b?b.scrollTop:0;reopenEnt(e.id);const b2=$('#drawer .dr-b');if(b2)b2.scrollTop=sc}
+  if($('#drawer').classList.contains('on')&&document.querySelector(`#drawer [data-chkbox="${e.id}"]`)){const b=$('#drawer .dr-b'),sc=b?b.scrollTop:0;const i=D.entrevistas.indexOf(e);openEnt(i,'chk');const b2=$('#drawer .dr-b');if(b2)b2.scrollTop=sc}
 }
 document.addEventListener('change',ev=>{
   const t=ev.target;if(!t.dataset||t.dataset.chk==null)return;
   if(!canEdit()){t.checked=!t.checked;toast('Só administradores podem marcar o checklist.');return}
   const [eid,iid]=t.dataset.chk.split(':');const e=D.entrevistas.find(y=>y.id===+eid);if(!e)return;
   const it=chkItens().find(x=>String(x.id)===iid);
-  e.chk=Object.assign({ok:{}},e.chk);e.chk.ok=Object.assign({},e.chk.ok);
+  const leg=chkState(e);e.chk=Object.assign({ok:{}},e.chk);e.chk.ok=Object.assign({},leg.legacy?leg.m:e.chk.ok);
   if(t.checked)e.chk.ok[iid]=true;else delete e.chk.ok[iid];
   e.chk.em=new Date().toISOString();e.chk.por=(ME&&ME.nome)||'';
   addHist(e,[{c:'Checklist · '+(it?it.t:iid),de:t.checked?'não conferido':'conferido',para:t.checked?'conferido':'não conferido'}],{merge:'chk'});
@@ -1891,7 +1908,7 @@ document.addEventListener('change',ev=>{
   addHist(e,[{c:'Checklist · Observações',de:ant.slice(0,400),para:novo.slice(0,400)}],{merge:'chk'});
   persist(null);toast('Observação do checklist salva');
 });
-document.addEventListener('click',ev=>{if(ev.target.closest('[data-gochk]')){ev.preventDefault();const el=document.querySelector('#drawer [data-chkbox]');el&&el.scrollIntoView({behavior:'smooth',block:'start'})}});
+document.addEventListener('click',ev=>{if(ev.target.closest('[data-gochk]')&&ENT_TAB.id){ev.preventDefault();reopenEnt(ENT_TAB.id)}});
 
 /* ---- Documentos do processo recebido ---- */
 const docOk=d=>S(d.sei)||S(d.desc)||S(d.link);
@@ -1905,44 +1922,60 @@ function docsHTML(e){
 
 function detHTML(q){return q.det&&q.det.length?`<ul class="det">${q.det.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}
 function regHTML(r){return `<div class="steps">${PQ(r).map((q,k)=>`<div class="step"><span class="n">${k+1}</span><div><h4>${esc(q.t)}</h4>${detHTML(q)}<div class="ans ${r.resp[k]?'':'none'}">${r.resp[k]?esc(r.resp[k]):'Sem registro nesta etapa.'}</div></div></div>`).join('')}</div>`}
-function entSteps(e){
+// etapas do processo, na ordem; a ficha mostra uma etapa por vez
+function entFlow(e){
   const NQ=e.reg?PQ(e.reg).length:rotAtivo().perguntas.length,fin=['Deferido','Indeferido','Cancelado'].includes(e.status);
-  const cs=chkState(e),nd=docsDe(e).length;
-  const L=[{t:'Processo',ok:true,sub:nd?plural(nd,'documento','documentos'):''},
-    {t:'Checklist',ok:cs.done,skip:chkLegacy(e)&&!cs.done,sub:cs.N?`${cs.n}/${cs.N}`:'',dica:'conferir documentos e requisitos no checklist antes da entrevista.',act:`<button class="btn sm pri" data-gochk>${ic('check')}Ir para o checklist</button>`},
-    {t:'Roteiro',ok:!!(e.reg&&e.reg.filled),sub:e.reg?`${e.reg.filled}/${NQ}`:'',dica:'conduzir a entrevista pelo roteiro e anotar as respostas.',
+  const cs=chkState(e),nd=docsDe(e).length,ix=D.entrevistas.indexOf(e);
+  const L=[{k:'proc',t:'Processo',ok:true,sub:nd?plural(nd,'documento','documentos'):''},
+    {k:'chk',t:'Checklist',ok:cs.done,sub:cs.legacy?'concluído':cs.N?`${cs.n}/${cs.N}`:'',dica:'conferir os documentos e requisitos no checklist.'},
+    {k:'rot',t:'Roteiro',ok:!!(e.reg&&e.reg.filled)||(fin&&!e.reg),skip:e.status==='Cancelado',sub:e.reg?`${e.reg.filled}/${NQ}`:fin?'sem registro':'',dica:'conduzir a entrevista pelo roteiro e anotar as respostas.',
       act:`<button class="btn sm pri" data-cd="${e.id}">${ic('list')}${e.reg?'Continuar entrevista':'Conduzir entrevista'}</button>`},
-    {t:'Resultado',ok:fin,sub:fin?e.status:'',dica:'marcar a aprovação e o resultado.',act:`<button class="btn sm pri" data-edit="ent:${e.id}">${ic('edit')}Registrar resultado</button>`},
-    {t:'Despacho',ok:!!(e.desp&&e.desp.salvoEm),skip:e.status==='Cancelado',dica:'gerar o rascunho do despacho e colar no SEI.',act:despPronto(e)?`<button class="btn sm pri" data-desp="${D.entrevistas.indexOf(e)}">${ic('file')}Gerar rascunho</button>`:''},
-    {t:'Controle FCs',ok:!!e.fcRef,skip:fin&&e.status!=='Deferido',dica:'incluir o servidor no controle de FCs/GRGs.',act:e.status==='Deferido'?`<button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button>`:''}];
-  const nx=L.findIndex(x=>!x.ok&&!x.skip);
-  return `<div class="esteps">${L.map((x,k)=>`<div class="es ${x.ok?'ok':x.skip?'skip':k===nx?'now':''}"><span>${x.ok?ic('check'):k+1}</span><b>${x.t}</b>${x.sub?`<em>${esc(x.sub)}</em>`:''}</div>`).join('')}</div>
-  ${nx>=0?`<div class="es-next"><span><b>Próximo passo:</b> ${L[nx].dica}</span>${canEdit()||L[nx].t==='Despacho'?L[nx].act||'':''}</div>`:'<div class="es-next ok"><b>Tudo concluído</b> para esta entrevista.</div>'}`;
+    {k:'res',t:'Resultado',ok:fin,sub:fin?e.status:'',dica:'registrar a aprovação e o resultado.',act:`<button class="btn sm pri" data-edit="ent:${e.id}">${ic('edit')}Registrar resultado</button>`},
+    {k:'desp',t:'Despacho',ok:!!(e.desp&&e.desp.salvoEm),skip:e.status==='Cancelado',dica:'gerar o rascunho do despacho e colar no SEI.',act:despPronto(e)?`<button class="btn sm pri" data-desp="${ix}">${ic('file')}Gerar rascunho</button>`:''},
+    {k:'fc',t:'Controle FCs',ok:e.status==='Deferido'&&!!e.fcRef,skip:fin&&e.status!=='Deferido',dica:'incluir o servidor no controle de FCs/GRGs.',act:e.status==='Deferido'?`<button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button>`:''}];
+  return {L,nx:L.findIndex(x=>!x.ok&&!x.skip)};
 }
+let ENT_TAB={id:null,k:null};
 function reopenEnt(id){const i=D.entrevistas.findIndex(y=>y.id===id);if(i>=0)openEnt(i)}
-function openEnt(i){
+function openEnt(i,tab){
   const e=D.entrevistas[i];if(!e)return;
+  const {L,nx}=entFlow(e);
+  // abre na etapa atual; ao reabrir o mesmo processo, fica na etapa que estava
+  const k=tab||(ENT_TAB.id===e.id&&ENT_TAB.k)||(nx>=0?L[nx].k:'proc');ENT_TAB={id:e.id,k};
+  const cur=L.findIndex(x=>x.k===k),St=L[cur];
   const kv=(l,v)=>`<div><span class="k">${l}</span>${v||'<span class="muted">—</span>'}</div>`;
   const dt=v=>/^\d{4}/.test(v)?isoBR(v):esc(v);
-  openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">Entrevista FC/GRG</div><h3>${esc(e.nome)}</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${stat(e.status)}${e.grau?`<span class="tag">${esc(e.grau)}</span>`:''}</div></div><button class="btn sm" data-report="entrevista:${e.id}" title="Relatório da entrevista">${ic('printer')}Relatório</button><button class="btn sm" data-edit="ent:${e.id}">${ic('edit')}Editar</button><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
-  <div class="dr-b">${entSteps(e)}<div class="kv">${kv('Órgão',esc(e.org))}${kv('Unidade',esc(e.uni))}${kv('Processo SEI',`<span class="mono">${esc(e.sei)}</span>`)}${kv('Escolaridade',esc(e.esc))}${kv('Data de envio',dt(e.env))}${kv('Data da entrevista',dt(e.ent))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',esc(e.res||'Em andamento'))}</div>
-  ${e.obs?`<div class="sec-t">Observações e encaminhamentos</div><div class="obs">${esc(e.obs)}</div>`:''}
-  <div class="sec-t">Documentos do processo recebido</div>
-  ${docsHTML(e)}
-  <div class="sec-t">Checklist antes da entrevista</div>
-  ${chkHTML(e)}
-  <div class="sec-t">Registro do roteiro de entrevista</div>
-  ${e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro encontrado no roteiro</b><span>${esc(e.reg.nome)} · ${e.reg.filled} de ${PQ(e.reg).length} etapas registradas${D.roteiros.length>1?' · '+esc(rotOf(e.reg).titulo):''}</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg),rot:String(rotOf(e.reg).id)}))}'>Abrir registro ${ic('arrow')}</button>${canEdit()?`<button class="btn sm" data-cd="${e.id}">${ic('edit')}Anotar</button>`:''}</div><details class="regdet"><summary>Ver as anotações das ${PQ(e.reg).length} etapas</summary>${regHTML(e.reg)}</details>`
-    :`<div class="linkbox">${ic('list')}<div><b>Entrevista ainda não conduzida</b><span>Abra o roteiro para fazer as perguntas e anotar as respostas. As anotações viram o registro desta entrevista.</span></div><button class="btn sm pri" data-cd="${e.id}">${ic('list')}Conduzir entrevista</button></div>`}
-  <div class="sec-t">Pós-entrevista</div>
-  ${despPronto(e)?`<div class="linkbox ${e.status==='Deferido'?'ok':''}">${ic('file')}<div><b>Despacho de devolutiva</b><span>${e.desp&&e.desp.salvoEm?'Dados salvos em '+esc(isoBR(e.desp.salvoEm))+'. ':''}Gera o rascunho para copiar e colar no SEI, com ${e.status==='Indeferido'?'objeção':'“não apresentamos objeção”'} marcado.</span></div><button class="btn sm pri" data-desp="${i}">${ic('file')}Gerar rascunho</button></div>`
-    :`<div class="linkbox">${ic('file')}<div><b>Despacho de devolutiva</b><span>Fica disponível quando a aprovação na entrevista ou o resultado for registrado.</span></div></div>`}
-  <div class="sec-t">Controle de FCs e GRGs</div>
-  ${e.fcRef?`<div class="linkbox ok">${ic('award')}<div><b>Incluído no controle</b><span>${esc(fcShort(e.fcRef.fc))} · ${fmtBRL(e.fcRef.valor)} por mês · ${esc(e.fcRef.org)}</span></div><button class="btn sm" data-go="fcs" data-opts='${esc(JSON.stringify({q:e.fcRef.nome,org:'',vinc:'',lvl:''}))}'>Ver no controle ${ic('arrow')}</button></div>`
-    :e.status==='Deferido'?`<div class="linkbox warn">${ic('award')}<div><b>Deferido, mas fora do controle</b><span>Inclua o servidor no controle com o grau ${esc(e.grau||'—')} e o valor ${fmtBRL(e.valor!=null&&e.valor!==''?e.valor:VALOR_NIVEL[lvlOf(e.grau)]||0)}.</span></div><button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button></div>`
-    :`<div class="linkbox">${ic('award')}<div><b>Aguardando deferimento</b><span>${e.fcAuto===false?'A inclusão automática está desligada para esta entrevista.':'Quando o resultado for “Deferido”, o servidor entra no controle automaticamente, com o valor do grau.'}</span></div></div>`}
-  ${histHTML(e.hist)}</div>`);
+  const P={
+    proc:()=>`<div class="kv">${kv('Órgão',esc(e.org))}${kv('Unidade',esc(e.uni))}${kv('Processo SEI',`<span class="mono">${esc(e.sei)}</span>`)}${kv('Grau',esc(e.grau))}${kv('Escolaridade',esc(e.esc))}${kv('Data de envio',dt(e.env))}</div>
+      ${e.obs?`<div class="sec-t">Observações e encaminhamentos</div><div class="obs">${esc(e.obs)}</div>`:''}
+      <div class="sec-t">Documentos do processo</div>${docsHTML(e)}${histHTML(e.hist)}`,
+    chk:()=>chkHTML(e),
+    rot:()=>e.reg?`<div class="linkbox ok">${ic('list')}<div><b>Registro do roteiro</b><span>${e.reg.filled} de ${PQ(e.reg).length} etapas registradas${D.roteiros.length>1?' · '+esc(rotOf(e.reg).titulo):''}${e.ent&&/^\d{4}/.test(e.ent)?' · entrevista em '+isoBR(e.ent):''}</span></div><button class="btn sm" data-go="roteiro" data-opts='${esc(JSON.stringify({tab:'registros',q:'',org:'',sel:D.roteiro.registros.indexOf(e.reg),rot:String(rotOf(e.reg).id)}))}'>Abrir registro ${ic('arrow')}</button>${canEdit()?`<button class="btn sm" data-cd="${e.id}">${ic('edit')}Anotar</button>`:''}</div><div class="regin">${regHTML(e.reg)}</div>`
+      :e.status==='Cancelado'?`<div class="linkbox">${ic('list')}<div><b>Processo cancelado</b><span>Não houve entrevista.</span></div></div>`
+      :['Deferido','Indeferido'].includes(e.status)?`<div class="linkbox">${ic('list')}<div><b>Sem registro do roteiro</b><span>Processo concluído antes do registro das entrevistas no Conecta.</span></div>${canEdit()?`<button class="btn sm" data-cd="${e.id}">${ic('edit')}Registrar agora</button>`:''}</div>`
+      :`<div class="linkbox">${ic('list')}<div><b>Entrevista ainda não conduzida</b><span>Abra o roteiro para fazer as perguntas e anotar as respostas. As anotações viram o registro desta entrevista.</span></div>${canEdit()?`<button class="btn sm pri" data-cd="${e.id}">${ic('list')}Conduzir entrevista</button>`:''}</div>`,
+    res:()=>`<div class="kv">${kv('Data da entrevista',dt(e.ent))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',stat(e.status))}${kv('Grau',esc(e.grau))}</div>
+      ${canEdit()?`<div class="es-next"><span>${['Deferido','Indeferido','Cancelado'].includes(e.status)?'Resultado registrado.':'Registre a aprovação e o resultado quando a banca concluir.'}</span><button class="btn sm ${['Deferido','Indeferido','Cancelado'].includes(e.status)?'':'pri'}" data-edit="ent:${e.id}">${ic('edit')}${['Deferido','Indeferido','Cancelado'].includes(e.status)?'Editar resultado':'Registrar resultado'}</button></div>`:''}`,
+    desp:()=>e.status==='Cancelado'?`<div class="linkbox">${ic('file')}<div><b>Não se aplica</b><span>Processo cancelado.</span></div></div>`
+      :despPronto(e)?`<div class="linkbox ${e.desp&&e.desp.salvoEm?'ok':''}">${ic('file')}<div><b>Despacho de devolutiva</b><span>${e.desp&&e.desp.salvoEm?'Preparado em '+esc(isoBR(e.desp.salvoEm))+'. ':''}Gera o rascunho para copiar e colar no SEI, com ${e.status==='Indeferido'?'objeção':'“não apresentamos objeção”'} marcado.</span></div><button class="btn sm pri" data-desp="${i}">${ic('file')}${e.desp&&e.desp.salvoEm?'Abrir rascunho':'Gerar rascunho'}</button></div>`
+      :`<div class="linkbox">${ic('file')}<div><b>Despacho de devolutiva</b><span>Fica disponível quando a aprovação na entrevista ou o resultado for registrado.</span></div></div>`,
+    fc:()=>e.status==='Deferido'?(e.fcRef?`<div class="linkbox ok">${ic('award')}<div><b>Incluído no controle</b><span>${esc(fcShort(e.fcRef.fc))} · ${fmtBRL(e.fcRef.valor)} por mês · ${esc(e.fcRef.org)}</span></div><button class="btn sm" data-go="fcs" data-opts='${esc(JSON.stringify({q:e.fcRef.nome,org:'',vinc:'',lvl:''}))}'>Ver no controle ${ic('arrow')}</button></div>`
+        :`<div class="linkbox warn">${ic('award')}<div><b>Deferido, mas fora do controle</b><span>Inclua o servidor no controle com o grau ${esc(e.grau||'—')} e o valor ${fmtBRL(e.valor!=null&&e.valor!==''?e.valor:VALOR_NIVEL[lvlOf(e.grau)]||0)}.</span></div>${canEdit()?`<button class="btn sm pri" data-edit="fcent:${e.id}">${ic('plus')}Incluir agora</button>`:''}</div>`)
+      :['Indeferido','Cancelado'].includes(e.status)?`<div class="linkbox">${ic('award')}<div><b>Não se aplica</b><span>Processo ${e.status.toLowerCase()}.</span></div></div>`
+      :`<div class="linkbox">${ic('award')}<div><b>Aguardando deferimento</b><span>${e.fcAuto===false?'A inclusão automática está desligada para este processo.':'Quando o resultado for “Deferido”, o servidor entra no controle (ou tem o grau atualizado) automaticamente.'}</span></div></div>`
+  };
+  const prev=L[cur-1],next=L[cur+1];
+  openDrawer(`<div class="dr-h"><div style="min-width:0;flex:1"><div class="eyebrow">Entrevista FC/GRG</div><h3>${esc(e.nome)}</h3><div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${stat(e.status)}${e.grau?`<span class="tag">${esc(e.grau)}</span>`:''}<span class="muted" style="font-size:.75rem">${esc(e.org)}</span></div></div><button class="btn sm" data-report="entrevista:${e.id}" title="Relatório da entrevista">${ic('printer')}Relatório</button><button class="btn sm" data-edit="ent:${e.id}">${ic('edit')}Editar</button><button class="btn icon" data-close aria-label="Fechar">${ic('x')}</button></div>
+  <div class="dr-b">
+    <nav class="esteps" aria-label="Etapas do processo">${L.map((x,j)=>`<button class="es ${x.ok?'ok':x.skip?'skip':j===nx?'now':''} ${j===cur?'sel':''}" data-etab="${x.k}" aria-current="${j===cur?'step':'false'}"><span>${x.ok?ic('check'):j+1}</span><b>${x.t}</b>${x.sub?`<em>${esc(x.sub)}</em>`:''}</button>`).join('')}</nav>
+    ${nx<0?'<div class="es-next ok"><b>Tudo concluído</b> para este processo.</div>':cur===nx?`<div class="es-next now"><span><b>Etapa atual:</b> ${St.dica}</span>${canEdit()||St.k==='desp'?St.act||'':''}</div>`:`<div class="es-next"><span><b>Etapa atual do processo:</b> ${esc(L[nx].t)}</span><button class="btn sm" data-etab="${L[nx].k}">Ir para ${esc(L[nx].t)} ${ic('arrow')}</button></div>`}
+    <div class="sec-t">${esc(St.t)}${St.skip?' · não se aplica':''}</div>
+    <div class="etab">${P[k]()}</div>
+    <div class="enav">${prev?`<button class="btn sm ghost" data-etab="${prev.k}"><span style="display:inline-flex;transform:rotate(180deg)">${ic('arrow')}</span>${esc(prev.t)}</button>`:'<span></span>'}${next?`<button class="btn sm" data-etab="${next.k}">${esc(next.t)} ${ic('arrow')}</button>`:''}</div>
+  </div>`);
 }
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-etab]');if(!b||!ENT_TAB.id)return;ev.preventDefault();
+  const i=D.entrevistas.findIndex(y=>y.id===ENT_TAB.id);if(i<0)return;openEnt(i,b.dataset.etab);const d=$('#drawer .dr-b');if(d)d.scrollTop=0});
 
 /* ---- Pós-entrevista: rascunho do despacho SEI ---- */
 const DESP_REQS=['Encontra-se {lot} em unidade responsável pelo planejamento, orçamento e finanças;','Possui no mínimo 6 meses de conhecimento na área de planejamento, orçamento e finanças;','Possui curso superior;','Possui certificado de curso relacionado à área em que irá atuar;','Possui perfil técnico para atuar na área de planejamento, orçamento e finanças;','Possui alguma certificação superior relacionada à área de planejamento, orçamento e finanças.'];
@@ -2279,13 +2312,32 @@ function saveForm(alt){
 function showDup(dups,alt){
   const old=$('#frmWarn');if(!dups.length){old&&old.remove();return}
   const html=`<div id="frmWarn" class="dupw" role="alert">${ic('users')}<div><b>${dups.length>1?`Já existem ${dups.length} entrevistas`:'Já existe uma entrevista'} com este nome ou processo</b><span>Confira antes de concluir. Se for um novo processo da mesma pessoa, pode cadastrar mesmo assim.</span>
-    <ul>${dups.slice(0,6).map(x=>`<li><b>${esc(x.nome)}</b> · ${esc(x.org||'—')}${x.sei?' · SEI '+esc(x.sei):''} · ${esc(x.status)}${x.dt?' · '+isoBR(x.dt):''}<button type="button" class="lnkb" data-dupopen="${D.entrevistas.indexOf(x)}">Abrir</button></li>`).join('')}</ul>
+    <ul>${dups.slice(0,6).map(x=>`<li><b>${esc(x.nome)}</b> · ${esc(x.org||'—')}${x.sei?' · SEI '+esc(x.sei):''} · ${esc(x.status)}${x.dt?' · '+isoBR(x.dt):''}<button type="button" class="lnkb" data-dupopen="${D.entrevistas.indexOf(x)}">Abrir</button>${FORM&&!FORM.target?`<button type="button" class="lnkb" data-dupreuse="${D.entrevistas.indexOf(x)}">Usar este cadastro</button>`:''}</li>`).join('')}</ul>
+    ${FORM&&!FORM.target?'<span>“Usar este cadastro” registra o novo pedido no cadastro que já existe: os dados do pedido anterior ficam guardados no histórico, sem duplicar a pessoa.</span>':''}
     ${alt!==undefined?`<div class="dupw-a"><button type="button" class="btn sm pri" data-fsave="${alt?'alt':''}">${ic('check')}Cadastrar mesmo assim</button></div>`:''}</div></div>`;
   if(old)old.outerHTML=html;else $('#frm').insertAdjacentHTML('afterbegin',html);
   const b=$('#drawer .dr-b');if(b)b.scrollTo({top:0,behavior:'smooth'});
 }
 document.addEventListener('click',ev=>{const b=ev.target.closest('[data-dupopen]');if(!b)return;ev.preventDefault();
   if(formDirty()&&!confirm('Abrir a entrevista já cadastrada? O que você digitou neste formulário será descartado.'))return;openEnt(+b.dataset.dupopen)});
+// uma pessoa, um cadastro: o pedido novo entra no cadastro existente e o anterior vai para o histórico
+function reuseEnt(x,v){
+  const now=new Date().toISOString(),por=(ME&&ME.nome)||'';
+  const ant=[['Grau',x.grau],['Resultado',x.status],['Processo SEI',x.sei],['Data de envio',/^\d{4}/.test(S(x.env))?isoBR(x.env):x.env],['Data da entrevista',/^\d{4}/.test(S(x.ent))?isoBR(x.ent):x.ent],
+    ['Habilitação de documentos',x.hab],['Aprovação na entrevista',x.apr],['Despacho',x.desp&&x.desp.salvoEm?'preparado em '+isoBR(x.desp.salvoEm):''],
+    ['Registro do roteiro',x.reg?`${x.reg.filled} de ${PQ(x.reg).length} etapas (continua na área Roteiro)`:''],['Observações',x.obs]]
+    .filter(a=>S(a[1])).map(([c,d])=>({c:c+' (pedido anterior)',de:S(d).slice(0,400),para:'novo pedido'}));
+  x.hist=(Array.isArray(x.hist)?x.hist:[]).concat([{em:now,por,acao:'Novo pedido registrado no mesmo cadastro. Os dados do pedido anterior estão guardados aqui.',mud:ant}]);
+  ['res','apr','exp','hab','ent','desp','chk','regId','valor'].forEach(k=>delete x[k]);
+  Object.assign(x,v,{grau:v.grau?fcLabel(v.grau):'',criadoEm:now,upd:now});
+  return x;
+}
+document.addEventListener('click',ev=>{const b=ev.target.closest('[data-dupreuse]');if(!b||!FORM)return;ev.preventDefault();
+  const x=D.entrevistas[+b.dataset.dupreuse];if(!x)return;const v=readForm();
+  if(!S(v.nome)){toast('Preencha o nome do servidor.');return}
+  if(!confirm(`Registrar este pedido no cadastro de ${x.nome}?\n\nOs dados do pedido anterior (${x.grau||'sem grau'} · ${x.status}) ficam guardados no histórico.`))return;
+  reuseEnt(x,v);derive();persist('Novo pedido no cadastro de '+x.nome+' (pedido anterior guardado no histórico)');
+  FORM=null;closeAll();render();toast('Pedido registrado no cadastro existente');reopenEnt(x.id)});
 // aviso de nome repetido já ao preencher o nome (sem bloquear)
 document.addEventListener('change',ev=>{const t=ev.target;if(!FORM||!FORM.warn||!t.closest||!t.closest('#frm')||!['nome','sei'].includes(t.name))return;showDup(FORM.warn(readForm())||[])});
 function delForm(btn){
