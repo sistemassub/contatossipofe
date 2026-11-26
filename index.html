@@ -783,6 +783,11 @@ th{background:var(--surface-3)}
 .chk-i input:checked+span{color:var(--ink-2)}
 .chk-i input:disabled{cursor:default}
 .chk-f{font-size:.6875rem;color:var(--muted);margin-top:.375rem}
+.chk-req{display:block;font-style:normal;font-size:.72rem;font-weight:600;color:#7A5D00;margin-top:.125rem}
+:root[data-theme="dark"] .chk-req{color:#F2D33B}
+.chk-obs{display:flex;flex-direction:column;gap:.3rem;padding-top:.625rem;margin-top:.25rem;border-top:1px solid var(--line-2)}
+.chk-obs span{font-size:.6875rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-2)}
+.chk-obs textarea{width:100%;box-sizing:border-box;padding:.5rem .625rem;border:1px solid var(--line);border-radius:.5rem;background:var(--surface);font:inherit;font-size:.8125rem;color:var(--ink);resize:vertical}
 .cd-chk .chk{margin:.75rem 0 0;border:0;background:transparent;padding:0}
 .cd-chk .chk.done{background:transparent}
 .cd-h .n svg.i{width:.875rem;height:.875rem;stroke-width:2.5}
@@ -1235,13 +1240,12 @@ let _lastId=0;
 const uid=()=>{let t=Date.now()*100+Math.floor(Math.random()*50);if(t<=_lastId)t=_lastId+1;_lastId=t;return t};
 // Checklist conferido antes da entrevista (os itens podem ser editados pelos administradores)
 const CHECK_PADRAO=[
- {id:1,t:'Currículo do servidor anexado ao processo'},
- {id:2,t:'Plano de Trabalho anexado e assinado pela chefia'},
- {id:3,t:'Lotação em unidade de planejamento, orçamento e finanças confirmada'},
- {id:4,t:'Mínimo de 6 meses de experiência na área de planejamento, orçamento e finanças'},
- {id:5,t:'Curso superior comprovado'},
- {id:6,t:'Certificado de curso relacionado à área de atuação'},
- {id:7,t:'Entrevista agendada e candidato convocado'}];
+ {id:11,t:'Plano de Trabalho'},
+ {id:12,t:'Documento de escolaridade (para FCRG-1 e FCRG-2, nível superior obrigatório)',esc:1},
+ {id:13,t:'Declaração de perfil técnico'},
+ {id:14,t:'Declaração de experiência profissional: mínimo de 6 meses na área de planejamento, ou declaração excepcional'},
+ {id:15,t:'Currículo'},
+ {id:16,t:'Certidões (conforme procedimento de posse)'}];
 const DOC_TIPOS=['Currículo','Plano de Trabalho','Diploma ou certificado de curso superior','Certificado de curso na área','Comprovante de lotação','Ofício ou solicitação','Outro'];
 const ROT_PADRAO='Roteiro da Entrevista - SIPOFE PLANEJAMENTO';
 function emptyD(){return {contatos:[],geceg:[],fcs:[],entrevistas:[],roteiro:{registros:[]},roteiros:[{id:1,titulo:ROT_PADRAO,perguntas:[]}],rotAtivo:1,checklist:null,agenda:[],redeStats:{},gecegTitulo:'',log:[]}}
@@ -1857,7 +1861,8 @@ function chkHTML(e,inConduct){
   const s=chkState(e),ro=!canEdit();
   return `<div class="chk ${s.done?'done':''}" data-chkbox="${e.id}"><div class="chk-h"><b>${s.done?ic('check')+'Tudo conferido':'Confira antes de conduzir a entrevista'}</b><span>${s.n} de ${s.N} itens</span>${canEdit()&&!inConduct?`<button class="btn ghost sm" data-edit="chkitens:${e.id}" title="Editar os itens do checklist (vale para todas as entrevistas)">${ic('edit')}Itens</button>`:''}</div>
   <span class="chk-bar"><i style="width:${s.N?Math.round(s.n/s.N*100):0}%"></i></span>
-  ${s.it.map(x=>`<label class="chk-i"><input type="checkbox" data-chk="${e.id}:${x.id}"${s.m[x.id]?' checked':''}${ro?' disabled':''}><span>${esc(x.t)}</span></label>`).join('')}
+  ${s.it.map(x=>`<label class="chk-i"><input type="checkbox" data-chk="${e.id}:${x.id}"${s.m[x.id]?' checked':''}${ro?' disabled':''}><span>${esc(x.t)}${x.esc&&[1,2].includes(lvlOf(e.grau))?`<em class="chk-req">Obrigatório neste processo: ${esc(fcShort(e.grau))} exige nível superior</em>`:''}</span></label>`).join('')}
+  <label class="chk-obs"><span>Observações</span><textarea data-chkobs="${e.id}" rows="2" placeholder="Ex.: ressalvas, documento pendente, uso de declaração excepcional"${ro?' disabled':''}>${esc((e.chk&&e.chk.obs)||'')}</textarea></label>
   ${e.chk&&e.chk.em?`<div class="chk-f">Última conferência: ${esc(e.chk.por||'')} · ${fmtDT(e.chk.em)}</div>`:ro?'<div class="chk-f">Somente administradores podem marcar os itens.</div>':''}</div>`;
 }
 function refreshChk(e){
@@ -1876,6 +1881,15 @@ document.addEventListener('change',ev=>{
   let msg=null;
   if(chkState(e).done){msg='Checklist concluído: '+e.nome;if(!S(e.hab)){addHist(e,[{c:'Habilitação de documentos',de:'',para:'Sim'}],{merge:'chk'});e.hab='Sim'}}
   persist(msg);refreshChk(e);
+});
+// observações do checklist: salvas ao sair do campo
+document.addEventListener('change',ev=>{
+  const t=ev.target;if(!t.dataset||t.dataset.chkobs==null||!canEdit())return;
+  const e=D.entrevistas.find(y=>y.id===+t.dataset.chkobs);if(!e)return;
+  const novo=S(t.value),ant=S(e.chk&&e.chk.obs);if(novo===ant)return;
+  e.chk=Object.assign({ok:{}},e.chk,{obs:novo,em:new Date().toISOString(),por:(ME&&ME.nome)||''});
+  addHist(e,[{c:'Checklist · Observações',de:ant.slice(0,400),para:novo.slice(0,400)}],{merge:'chk'});
+  persist(null);toast('Observação do checklist salva');
 });
 document.addEventListener('click',ev=>{if(ev.target.closest('[data-gochk]')){ev.preventDefault();const el=document.querySelector('#drawer [data-chkbox]');el&&el.scrollIntoView({behavior:'smooth',block:'start'})}});
 
@@ -2430,7 +2444,7 @@ const EDIT={
     const old=chkItens();
     openForm({eyebrow:'Checklist antes da entrevista',title:'Itens do checklist',values:{itens:old.map(x=>x.t)},
       fields:[{type:'note',text:'Vale para todas as entrevistas. Itens que não mudarem de texto continuam marcados onde já foram conferidos.'},{k:'itens',label:'Itens (um por linha)',type:'lines',rows:9,req:1}],
-      onSave:v=>{D.checklist=v.itens.map(t=>{const o=old.find(x=>x.t===t);return {id:o?o.id:uid(),t}});return 'Itens do checklist atualizados ('+v.itens.length+')'},
+      onSave:v=>{D.checklist=v.itens.map(t=>{const o=old.find(x=>x.t===t);return o?{...o,t}:{id:uid(),t}});return 'Itens do checklist atualizados ('+v.itens.length+')'},
       after:entId?()=>reopenEnt(+entId):null});
   },
   rot(id){
@@ -2725,7 +2739,7 @@ const REPORT={
       sections:[{title:'Dados do processo',html:`<div class="kv">${kv('Processo SEI',esc(e.sei))}${kv('Grau',esc(e.grau))}${kv('Data de envio',dt(e.env))}${kv('Data da entrevista',dt(e.ent))}${kv('Escolaridade',esc(e.esc))}${kv('Experiência',esc(e.exp))}${kv('Habilitação de documentos',esc(e.hab))}${kv('Aprovação na entrevista',esc(e.apr))}${kv('Resultado',stTxt(e.status))}</div>`},
         e.obs?{title:'Observações e encaminhamentos',html:`<div class="txt">${escBR(e.obs)}</div>`}:null,
         docsDe(e).length?{title:'Documentos do processo',html:T([{h:'Tipo',k:'tipo',w:'28%'},{h:'Nº SEI',k:'sei'},{h:'Descrição',k:'desc'}],docsDe(e))}:null,
-        (()=>{const c=chkState(e);return chkLegacy(e)&&!c.n?null:{title:'Checklist antes da entrevista',note:`${c.n} de ${c.N} itens conferidos`,html:T([{h:'Item',k:'t'},{h:'Conferido',f:x=>c.m[x.id]?'Sim':'—',w:'14%'}],c.it)}})(),
+        (()=>{const c=chkState(e);return chkLegacy(e)&&!c.n?null:{title:'Checklist antes da entrevista',note:`${c.n} de ${c.N} itens conferidos`,html:T([{h:'Item',k:'t'},{h:'Conferido',f:x=>c.m[x.id]?'Sim':'—',w:'14%'}],c.it)+(e.chk&&e.chk.obs?`<div class="txt"><b>Observações:</b> ${escBR(e.chk.obs)}</div>`:'')}})(),
         {title:'Registro do roteiro de entrevista',note:e.reg&&D.roteiros.length>1?rotOf(e.reg).titulo:'',html:e.reg?regBlock(e.reg):'<p>Sem registro no roteiro.</p>'}].filter(Boolean),file:'Entrevista '+e.nome};
   },
   roteiro(){
