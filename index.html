@@ -954,6 +954,11 @@ body::after{width:32rem;height:32rem;right:-9rem;bottom:-10rem;background:rgba(3
 .stg-more{all:unset;cursor:pointer;font-size:.75rem;font-weight:600;color:var(--info);padding:.25rem .25rem 0}
 .stg-empty{padding:.75rem;border-radius:.75rem;border:1px dashed color-mix(in srgb,var(--muted) 45%,transparent);font-size:.75rem;color:var(--muted);text-align:center}
 .hm-sec{margin-bottom:1.25rem}
+/* sem login: só a tela de entrada, sem menu nem busca */
+.auth-only .side,.auth-only .top,.auth-only #btnSearch{display:none!important}
+.auth-only .app{grid-template-columns:minmax(0,1fr)!important}
+.auth-only .content{padding:1.5rem 1rem}
+.auth-only .login-wrap{min-height:calc(100vh - 3rem)}
 .duo.one{grid-template-columns:minmax(0,1fr)}
 @media (max-width:1150px){.hm-row{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:900px){.hm-head h1{font-size:1.625rem}.hm-search kbd{display:none}.tk-c{min-width:0}}
@@ -1337,8 +1342,9 @@ async function loadInitial(){
     SB=SB||window.supabase.createClient(SUPA_URL,SUPA_KEY);
     const {data:{session}}=await SB.auth.getSession();
     await resolveRole(session);
-    await fetchAll();
-    watchChanges();
+    // sem modo visitante: sem login válido, nenhum dado é carregado
+    if(ROLE==='visitante'){if(session)try{await SB.auth.signOut()}catch(_){}D=emptyD();LOADED=true;LOAD_ERR=''}
+    else{await fetchAll();watchChanges()}
   }catch(e){console.error(e);LOAD_ERR=e.message||String(e);LOADED=true}
   st.home.org=null;render();
 }
@@ -1353,9 +1359,11 @@ async function doLogin(user,pass){
   const {error}=await SB.auth.signInWithPassword({email:authEmail(user),password:pass});
   if(error)throw new Error(/invalid/i.test(error.message)?'Usuário ou senha incorretos.':error.message);
   const {data:{session}}=await SB.auth.getSession();
-  await resolveRole(session);await fetchAll();watchChanges();
+  await resolveRole(session);
+  if(ROLE==='visitante'){const sem=ME&&ME.semAcesso;try{await SB.auth.signOut()}catch(_){}ME=null;throw new Error(sem?'Seu usuário não tem acesso ao Conecta SIPOFE. Fale com um administrador do Hub SCPMA.':'Não foi possível confirmar o seu acesso.')}
+  await fetchAll();watchChanges();
 }
-async function doLogout(){try{await SB.auth.signOut()}catch(e){}ROLE='visitante';ME=null;await fetchAll().catch(()=>{});watchChanges();if(!allowed(st.view))st.view='home';render();toast('Você saiu. Agora está no modo visitante.')}
+async function doLogout(){try{await SB.auth.signOut()}catch(e){}ROLE='visitante';ME=null;D=emptyD();SNAP=new Map();VER=new Map();if(CH){try{SB.removeChannel(CH)}catch(_){}CH=null}closeAll();go('entrar');toast('Você saiu do Conecta SIPOFE.')}
 function derive(){
   mergeOrgs();
   D.contatos.forEach(o=>o.pessoas.forEach(p=>{p.lvl=p.fc?lvlOf(p.fc):0}));
@@ -1501,6 +1509,7 @@ function renderNav(){
   $('#btnTheme').innerHTML=ic(dark?'sun':'moon');
 }
 function go(view,opts){
+  if(ROLE==='visitante')view='entrar';
   // sair para outra área fecha a ficha/gaveta aberta (antes ela ficava presa na tela)
   if($('#drawer').classList.contains('on')||$('#modal').classList.contains('on'))closeAll();
   // ao entrar em Entrevistas, sempre da mais recente para a mais antiga
@@ -1516,7 +1525,9 @@ function render(){
   const v=V[st.view]||V.home;
   $('#crumb').innerHTML=st.view==='home'?`<b>Visão geral</b>`:`<span class="g">${v.g}</span>${ic('chev')}<b>${v.t}</b>`;
   document.title='Conecta SIPOFE';
+  if(ROLE==='visitante'&&LOADED&&!LOAD_ERR)st.view='entrar';
   document.documentElement.classList.toggle('is-home',st.view==='home');
+  document.documentElement.classList.toggle('auth-only',ROLE==='visitante');
   renderNav();
   if(!LOADED){$('#view').innerHTML=`<div class="loading"><span class="spin"></span>Carregando dados da rede…</div>`;return}
   if(LOAD_ERR&&st.view!=='entrar'){$('#view').innerHTML=`<section class="panel lockp"><span class="lk bad">${ic('x')}</span><h2>Não foi possível carregar os dados</h2><p>${esc(LOAD_ERR)}</p><button class="btn pri" id="btnRetry">${ic('refresh')}Tentar de novo</button></section>`;return}
@@ -1553,7 +1564,7 @@ const dtCell=v=>/^\d{4}-/.test(v)?`<span class="mono">${isoBR(v)}</span>`:`<span
 const R={};
 
 R.entrar=()=>{
-  const lv=[['admin','Administrador','Consulta, edita e exporta todas as informações.'],['usuario','Usuário','Consulta e exporta tudo, sem editar.'],['visitante','Visitante','Sem login: contatos (sem telefone), GECEG e agenda.']];
+  const lv=[['admin','Administrador','Consulta, edita e exporta todas as informações.'],['usuario','Usuário','Consulta e exporta tudo, sem editar.']];
   return `<div class="login-wrap"><div class="login">
     <div class="lg-art">
       <div class="lg-logo">${LOGO_SVG}</div>
@@ -1563,12 +1574,11 @@ R.entrar=()=>{
     </div>
     ${ROLE==='visitante'?`<form class="lg-form" id="lgForm" autocomplete="on" onsubmit="return false">
       <div class="eyebrow">Acesso</div><h2>Entrar no Conecta</h2>
-      <p class="lg-sub">Use o mesmo usuário e senha do <b>Hub SCPMA</b>.</p>
+      <p class="lg-sub">Use o mesmo usuário e senha do <b>Hub SCPMA</b>. O acesso é restrito a usuários autorizados.</p>
       <label class="fl"><span>Usuário</span><input id="lgUser" name="username" autocomplete="username" placeholder="seu.usuario" required></label>
       <label class="fl"><span>Senha</span><div class="pw"><input id="lgPass" name="password" type="password" autocomplete="current-password" required><button type="button" class="btn icon ghost sm" id="lgEye" aria-label="Mostrar senha">${ic('eye')}</button></div></label>
       <div class="lg-err" id="lgErr" role="alert"></div>
       <button class="btn pri lg-btn" type="button" id="lgBtn">${ic('login')}Entrar</button>
-      <button class="btn ghost lg-alt" type="button" data-go="home">${ic('eye')}Continuar como visitante</button>
       <p class="lg-note">${ic('shield')}Primeiro acesso ou esqueceu a senha? Crie ou redefina pelo Hub SCPMA.</p>
     </form>`:`<div class="lg-form"><div class="eyebrow">Acesso</div><h2>Você já entrou</h2><p class="lg-sub">Conectado(a) como <b>${esc(ME.nome)}</b> · <span class="lv ${ROLE}">${ROLE_LBL[ROLE]}</span></p><button class="btn pri lg-btn" data-go="home">${ic('home')}Ir para a visão geral</button><button class="btn lg-alt" id="btnOut2">${ic('logout')}Sair</button></div>`}
   </div></div>`;
@@ -2570,7 +2580,7 @@ function buildIndex(){
   return idx;
 }
 let IDX=[],gSel=0,gList=[];
-function openSearch(){IDX=buildIndex();$('#modal').classList.add('on');$('#ov').classList.add('on');const i=$('#gq');i.value='';runSearch('');setTimeout(()=>i.focus(),30)}
+function openSearch(){if(ROLE==='visitante')return;IDX=buildIndex();$('#modal').classList.add('on');$('#ov').classList.add('on');const i=$('#gq');i.value='';runSearch('');setTimeout(()=>i.focus(),30)}
 function formDirty(){if(!FORM||FORM._ini==null||!$('#drawer').classList.contains('on')||!$('#frm'))return false;try{return JSON.stringify(readForm())!==FORM._ini}catch(_){return false}}
 // fechar pelo Esc, pelo Cancelar ou clicando fora: pergunta antes de descartar o que foi digitado
 function tryClose(){
@@ -2934,8 +2944,7 @@ async function formLogin(){
   if(!u||!pw){er.textContent='Informe usuário e senha.';return}
   btn.disabled=true;btn.innerHTML=`<span class="spin"></span>Entrando…`;er.textContent='';
   try{await doLogin(u,pw);
-    if(ROLE==='visitante'){er.textContent='Seu usuário não tem permissão neste hub. Fale com um administrador do Hub SCPMA.';btn.disabled=false;btn.innerHTML=ic('login')+'Entrar';renderNav();return}
-    st.home.org=null;go('home');toast('Bem-vindo(a), '+S(ME.nome).split(' ')[0]+'! Acesso: '+ROLE_LBL[ROLE])}
+    st.home.org=null;document.documentElement.classList.remove('auth-only');go('home');toast('Bem-vindo(a), '+S(ME.nome).split(' ')[0]+'! Acesso: '+ROLE_LBL[ROLE])}
   catch(err){er.textContent=err.message||'Não foi possível entrar.';btn.disabled=false;btn.innerHTML=ic('login')+'Entrar'}
 }
 document.addEventListener('click',e=>{if(e.target.closest('#lgBtn')){e.preventDefault();formLogin()}});
